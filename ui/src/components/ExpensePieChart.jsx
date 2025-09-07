@@ -1,10 +1,13 @@
 
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 const ExpensePieChart = ({ data }) => {
+  const { t } = useTranslation();
+  
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5 h-96">
-        <h3 className="font-bold mb-4 text-lg">Gider Dağılımı</h3>
+        <h3 className="font-bold mb-4 text-lg">{t('expenseDistribution')}</h3>
         <ResponsiveContainer width="100%" height="100%">
             <PieChart>
                 <Pie

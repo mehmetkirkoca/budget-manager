@@ -4,13 +4,16 @@ import ExpensePieChart from '../components/ExpensePieChart';
 import AssetProgress from '../components/AssetProgress';
 import { summaryData, expenseData, assetData } from '../data/mockData';
 import { FiTrendingUp, FiTrendingDown, FiDollarSign, FiTarget, FiActivity } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 
 const Dashboard = () => {
+  const { t } = useTranslation();
+  
   const cards = [
-    { title: 'Aylık Gelir', value: summaryData.monthlyIncome, icon: <FiTrendingUp />, color: 'text-green-500' },
-    { title: 'Aylık Gider', value: summaryData.monthlyExpenses, icon: <FiTrendingDown />, color: 'text-red-500' },
-    { title: 'Net Kalan', value: summaryData.netBalance, icon: <FiDollarSign />, color: 'text-blue-500' },
-    { title: 'Toplam Varlık', value: summaryData.totalAssets, icon: <FiActivity />, color: 'text-indigo-500' },
+    { title: t('monthlyIncome'), value: summaryData.monthlyIncome, icon: <FiTrendingUp />, color: 'text-green-500' },
+    { title: t('monthlyExpenses'), value: summaryData.monthlyExpenses, icon: <FiTrendingDown />, color: 'text-red-500' },
+    { title: t('netBalance'), value: summaryData.netBalance, icon: <FiDollarSign />, color: 'text-blue-500' },
+    { title: t('totalAssets'), value: summaryData.totalAssets, icon: <FiActivity />, color: 'text-indigo-500' },
   ];
 
   return (

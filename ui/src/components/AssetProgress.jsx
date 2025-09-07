@@ -1,5 +1,8 @@
 
+import { useTranslation } from 'react-i18next';
+
 const AssetProgress = ({ assets }) => {
+  const { t } = useTranslation();
 
   const calculateProgress = (current, target) => {
     if (target <= 0) return 0;
@@ -8,7 +11,7 @@ const AssetProgress = ({ assets }) => {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
-      <h3 className="font-bold mb-4 text-lg">Varlık Hedefleri</h3>
+      <h3 className="font-bold mb-4 text-lg">{t('assetTargets')}</h3>
       <div className="space-y-4">
         {assets.map((asset, index) => {
           const progress = calculateProgress(asset.current, asset.target);

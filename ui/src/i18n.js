@@ -18,14 +18,24 @@ const resources = {
       totalBalance: 'Total Balance',
       monthlyIncome: 'Monthly Income',
       monthlyExpenses: 'Monthly Expenses',
+      netBalance: 'Net Balance',
+      totalAssets: 'Total Assets',
       savingsRate: 'Savings Rate',
       recentTransactions: 'Recent Transactions',
       expenseCategories: 'Expense Categories',
       budgetOverview: 'Budget Overview',
+      expenseDistribution: 'Expense Distribution',
+      assetTargets: 'Asset Targets',
+      
+      // Pages
+      expenseTransactions: 'Expense Transactions',
+      assetManagement: 'Asset Management',
       
       // Forms
-      addExpense: 'Add Expense',
+      addExpense: 'Add New Expense',
       addAsset: 'Add Asset',
+      newExpense: 'New Expense',
+      newAsset: 'New Asset',
       amount: 'Amount',
       category: 'Category',
       date: 'Date',
@@ -35,6 +45,12 @@ const resources = {
       value: 'Value',
       targetAmount: 'Target Amount',
       currentAmount: 'Current Amount',
+      assetType: 'Asset Type',
+      currentValue: 'Current Value',
+      targetValue: 'Target Value',
+      status: 'Status',
+      completed: 'Completed',
+      pending: 'Pending',
       
       // Actions
       save: 'Save',
@@ -69,6 +85,8 @@ const resources = {
       loading: 'Loading...',
       error: 'An error occurred',
       success: 'Operation completed successfully',
+      requiredFieldsError: 'Category, Amount and Date fields are required.',
+      assetRequiredFieldsError: 'Type, Current Amount and Target Amount fields are required.',
     }
   },
   tr: {
@@ -86,14 +104,24 @@ const resources = {
       totalBalance: 'Toplam Bakiye',
       monthlyIncome: 'Aylık Gelir',
       monthlyExpenses: 'Aylık Giderler',
+      netBalance: 'Net Kalan',
+      totalAssets: 'Toplam Varlık',
       savingsRate: 'Tasarruf Oranı',
       recentTransactions: 'Son İşlemler',
       expenseCategories: 'Gider Kategorileri',
       budgetOverview: 'Bütçe Özeti',
+      expenseDistribution: 'Gider Dağılımı',
+      assetTargets: 'Varlık Hedefleri',
+      
+      // Pages
+      expenseTransactions: 'Gider İşlemleri',
+      assetManagement: 'Varlık Yönetimi',
       
       // Forms
-      addExpense: 'Gider Ekle',
+      addExpense: 'Yeni Gider Ekle',
       addAsset: 'Varlık Ekle',
+      newExpense: 'Yeni Gider',
+      newAsset: 'Yeni Varlık',
       amount: 'Tutar',
       category: 'Kategori',
       date: 'Tarih',
@@ -103,6 +131,12 @@ const resources = {
       value: 'Değer',
       targetAmount: 'Hedef Tutar',
       currentAmount: 'Mevcut Tutar',
+      assetType: 'Varlık Türü',
+      currentValue: 'Mevcut Değer',
+      targetValue: 'Hedef Değer',
+      status: 'Durum',
+      completed: 'Gerçekleşti',
+      pending: 'Beklenen',
       
       // Actions
       save: 'Kaydet',
@@ -137,6 +171,8 @@ const resources = {
       loading: 'Yükleniyor...',
       error: 'Bir hata oluştu',
       success: 'İşlem başarıyla tamamlandı',
+      requiredFieldsError: 'Kategori, Tutar ve Tarih alanları zorunludur.',
+      assetRequiredFieldsError: 'Tür, Mevcut Tutar ve Hedef Tutar alanları zorunludur.',
     }
   }
 };
@@ -146,8 +182,16 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
+    lng: 'en', // Varsayılan dil İngilizce
     fallbackLng: 'en',
     debug: true,
+    
+    detection: {
+      order: ['localStorage', 'htmlTag'],
+      lookupLocalStorage: 'i18nextLng',
+      caches: ['localStorage']
+    },
+    
     interpolation: {
       escapeValue: false,
     }

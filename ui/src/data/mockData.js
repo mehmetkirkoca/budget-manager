@@ -22,9 +22,9 @@ export const assetData = [
 ];
 
 export const transactionData = [
-    { id: 1, category: 'Market', description: 'Haftalık alışveriş', amount: 345.50, date: '2025-09-06', status: 'Gerçekleşti' },
-    { id: 2, category: 'Faturalar', description: 'Elektrik Faturası', amount: 280.75, date: '2025-09-05', status: 'Gerçekleşti' },
-    { id: 3, category: 'Kira', description: 'Eylül Kirası', amount: 2500.00, date: '2025-09-01', status: 'Gerçekleşti' },
-    { id: 4, category: 'Ulaşım', description: 'Aylık Akbil', amount: 450.00, date: '2025-09-01', status: 'Gerçekleşti' },
-    { id: 5, category: 'Beklenmedik', description: 'Dişçi', amount: 750.00, date: '2025-09-10', status: 'Beklenen' },
+    { id: 1, category: 'Market', description: 'Haftalık alışveriş', amount: 345.50, date: '2025-09-06', status: 'Completed' },
+    { id: 2, category: 'Faturalar', description: 'Elektrik Faturası', amount: 280.75, date: '2025-09-05', status: 'Completed' },
+    { id: 3, category: 'Kira', description: 'Eylül Kirası', amount: 2500.00, date: '2025-09-01', status: 'Completed' },
+    { id: 4, category: 'Ulaşım', description: 'Aylık Akbil', amount: 450.00, date: '2025-09-01', status: 'Completed' },
+    { id: 5, category: 'Beklenmedik', description: 'Dişçi', amount: 750.00, date: '2025-09-10', status: 'Pending' },
 ];

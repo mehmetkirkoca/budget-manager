@@ -17,6 +17,8 @@ const postExpenseSchema = {
 async function expenseRoutes(fastify, options) {
   fastify.get('/expenses', expenseController.getAllExpenses);
   fastify.post('/expenses', { schema: postExpenseSchema }, expenseController.createExpense);
+  fastify.put('/expenses/:id', expenseController.updateExpense);
+  fastify.delete('/expenses/:id', expenseController.deleteExpense);
   fastify.get('/expenses/by-category', expenseController.getExpensesByCategory);
 }
 

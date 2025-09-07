@@ -20,7 +20,7 @@ const Layout = () => {
       {/* Sidebar */}
       <aside className={`transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'} bg-white dark:bg-gray-800 shadow-md flex flex-col`}>
         <div className="flex items-center justify-between p-4 h-16 border-b dark:border-gray-700">
-            <span className={`font-bold text-xl text-blue-600 dark:text-blue-400 ${!isSidebarOpen && 'hidden'}`}>Budget</span>
+            <span className={`font-bold text-xl text-blue-600 dark:text-blue-400 ${!isSidebarOpen && 'hidden'}`}>{t('sidebarTitle')}</span>
             <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
                 <FiMenu />
             </button>
@@ -42,7 +42,7 @@ const Layout = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 bg-white dark:bg-gray-800 shadow-sm flex items-center justify-between px-6 border-b dark:border-gray-700">
-            <h1 className="text-2xl font-semibold">Budget Manager</h1>
+            <h1 className="text-2xl font-semibold">{t('appTitle')}</h1>
             <LanguageSwitcher />
         </header>
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-6">

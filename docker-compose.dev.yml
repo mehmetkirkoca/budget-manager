@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # UI Service - Development Mode
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile.dev
+      args:
+        VITE_API_URL: /api
+    container_name: budget_ui_dev
+    restart: unless-stopped
+    volumes:
+      # Mount source code for hot reload
+      - ./ui/src:/app/src:ro
+      - ./ui/public:/app/public:ro
+      - ./ui/index.html:/app/index.html:ro
+      - ./ui/package.json:/app/package.json:ro
+      - ./ui/vite.config.js:/app/vite.config.js:ro
+      - ./ui/tailwind.config.js:/app/tailwind.config.js:ro
+      - ./ui/postcss.config.js:/app/postcss.config.js:ro
+    ports:
+      - "5173:5173"  # Expose Vite dev server
+    environment:
+      - NODE_ENV=development
+    networks:
+      - budget_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # API Service - Development Mode  
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    container_name: budget_api_dev
+    restart: unless-stopped
+    volumes:
+      # Mount source code for nodemon
+      - ./api/src:/app/src:ro
+      - ./api/package.json:/app/package.json:ro
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/budget-manager?authSource=admin
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - budget_network
+
+  # Nginx - Development configuration
+  nginx:
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro

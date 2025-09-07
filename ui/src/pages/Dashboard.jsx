@@ -1,4 +1,5 @@
 
+import { useEffect } from 'react';
 import SummaryCard from '../components/SummaryCard';
 import ExpensePieChart from '../components/ExpensePieChart';
 import AssetProgress from '../components/AssetProgress';
@@ -8,6 +9,10 @@ import { useTranslation } from 'react-i18next';
 
 const Dashboard = () => {
   const { t } = useTranslation();
+  
+  useEffect(() => {
+    document.title = `${t('dashboard')} - ${t('appTitle')}`;
+  }, [t]);
   
   const cards = [
     { title: t('monthlyIncome'), value: summaryData.monthlyIncome, icon: <FiTrendingUp />, color: 'text-green-500' },

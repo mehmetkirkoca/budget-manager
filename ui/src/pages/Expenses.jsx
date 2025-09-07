@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DynamicTable from '../components/DynamicTable';
 import Modal from '../components/Modal';
 import ExpenseForm from '../components/ExpenseForm';
@@ -10,6 +10,10 @@ import { useTranslation } from 'react-i18next';
 const Expenses = () => {
   const { t } = useTranslation();
   const [isModalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    document.title = `${t('expenses')} - ${t('appTitle')}`;
+  }, [t]);
 
   const columns = [
     { header: t('category'), key: 'category' },

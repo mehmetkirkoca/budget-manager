@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DynamicTable from '../components/DynamicTable';
 import Modal from '../components/Modal';
 import AssetForm from '../components/AssetForm';
@@ -10,6 +10,10 @@ import { useTranslation } from 'react-i18next';
 const Assets = () => {
   const { t } = useTranslation();
   const [isModalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    document.title = `${t('assets')} - ${t('appTitle')}`;
+  }, [t]);
 
   const columns = [
     { header: t('assetType'), key: 'name' },

@@ -40,8 +40,13 @@ clean: ## Remove containers, networks, images, and volumes
 	docker-compose down -v
 	docker system prune -f
 
-dev: ## Start services in development mode
-	docker-compose up --build
+dev: ## Start services in development mode with hot reload
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+dev-detached: ## Start services in development mode in background
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 prod: ## Start services in production mode
 	docker-compose -f docker-compose.yml up -d --build

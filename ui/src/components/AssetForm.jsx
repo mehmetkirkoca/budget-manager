@@ -9,6 +9,7 @@ const AssetForm = ({ onClose, asset, onSave }) => {
   const [description, setDescription] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
+  const [unit, setUnit] = useState('TRY');
 
   useEffect(() => {
     if (asset) {
@@ -17,12 +18,14 @@ const AssetForm = ({ onClose, asset, onSave }) => {
       setDescription(asset.description || '');
       setCurrentAmount(asset.currentAmount?.toString() || '0');
       setTargetAmount(asset.targetAmount?.toString() || '');
+      setUnit(asset.unit || 'TRY');
     } else {
       setName('');
       setType('');
       setDescription('');
       setCurrentAmount('0');
       setTargetAmount('');
+      setUnit('TRY');
     }
   }, [asset]);
 
@@ -38,7 +41,8 @@ const AssetForm = ({ onClose, asset, onSave }) => {
       type,
       description: description.trim(),
       currentAmount: parseFloat(currentAmount) || 0,
-      targetAmount: parseFloat(targetAmount)
+      targetAmount: parseFloat(targetAmount),
+      unit: unit.trim()
     };
     
     // Call the onSave callback with the asset data
@@ -121,6 +125,18 @@ const AssetForm = ({ onClose, asset, onSave }) => {
           min="0"
           step="0.01"
           required
+        />
+      </div>
+
+      <div>
+        <label htmlFor="unit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('unit')}</label>
+        <input 
+          type="text" 
+          id="unit" 
+          value={unit} 
+          onChange={e => setUnit(e.target.value)} 
+          className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="TRY, gr, adet, m², vb."
         />
       </div>
 

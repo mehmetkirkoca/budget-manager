@@ -29,7 +29,7 @@ const AssetProgress = ({ assets }) => {
                 <div className="flex justify-between mb-1">
                   <span className="text-base font-medium text-gray-700 dark:text-white">{asset.name}</span>
                   <span className="text-sm font-medium text-gray-700 dark:text-white">
-                    {asset.currentAmount.toLocaleString('tr-TR')} / {asset.targetAmount.toLocaleString('tr-TR')} TRY
+                    {asset.currentAmount.toLocaleString('tr-TR')} / {asset.targetAmount.toLocaleString('tr-TR')} {asset.unit || 'TRY'}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">

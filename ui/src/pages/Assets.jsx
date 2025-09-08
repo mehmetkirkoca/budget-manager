@@ -76,12 +76,12 @@ const Assets = () => {
     {
       header: t('currentAmount'),
       key: 'currentAmount',
-      render: (row) => row.currentAmount.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })
+      render: (row) => `${row.currentAmount.toLocaleString('tr-TR')} ${row.unit || 'TRY'}`
     },
     {
       header: t('targetAmount'),
       key: 'targetAmount',
-      render: (row) => row.targetAmount.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })
+      render: (row) => `${row.targetAmount.toLocaleString('tr-TR')} ${row.unit || 'TRY'}`
     },
     {
         header: t('progress'),

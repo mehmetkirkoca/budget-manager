@@ -25,6 +25,11 @@ const assetSchema = new mongoose.Schema({
   description: {
     type: String,
     trim: true
+  },
+  unit: {
+    type: String,
+    default: 'TRY',
+    trim: true
   }
 }, {
   timestamps: true

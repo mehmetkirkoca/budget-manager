@@ -10,6 +10,7 @@ const postAssetSchema = {
       description: { type: 'string' },
       currentAmount: { type: 'number', minimum: 0 },
       targetAmount: { type: 'number', minimum: 0 },
+      unit: { type: 'string' },
     },
   },
 };
@@ -23,6 +24,7 @@ const putAssetSchema = {
       description: { type: 'string' },
       currentAmount: { type: 'number', minimum: 0 },
       targetAmount: { type: 'number', minimum: 0 },
+      unit: { type: 'string' },
     },
   },
 };

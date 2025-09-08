@@ -11,13 +11,14 @@ const getAllAssets = async (request, reply) => {
 
 const createAsset = async (request, reply) => {
   try {
-    const { name, type, description, currentAmount, targetAmount } = request.body;
+    const { name, type, description, currentAmount, targetAmount, unit } = request.body;
     const newAsset = new Asset({
       name,
       type,
       description,
       currentAmount: currentAmount || 0,
       targetAmount,
+      unit: unit || 'TRY',
     });
     
     await newAsset.save();
@@ -30,11 +31,11 @@ const createAsset = async (request, reply) => {
 const updateAsset = async (request, reply) => {
   try {
     const { id } = request.params;
-    const { name, type, description, currentAmount, targetAmount } = request.body;
+    const { name, type, description, currentAmount, targetAmount, unit } = request.body;
     
     const asset = await Asset.findByIdAndUpdate(
       id,
-      { name, type, description, currentAmount, targetAmount },
+      { name, type, description, currentAmount, targetAmount, unit },
       { new: true, runValidators: true }
     );
     

@@ -8,6 +8,7 @@ const resources = {
       // Navigation
       dashboard: 'Dashboard',
       expenses: 'Expenses',
+      incomes: 'Incomes',
       assets: 'Assets',
       categories: 'Categories',
       
@@ -30,17 +31,30 @@ const resources = {
       
       // Pages
       expenseTransactions: 'Expense Transactions',
+      incomeManagement: 'Income Management',
       assetManagement: 'Asset Management',
       categoryManagement: 'Category Management',
       
       // Forms
       addExpense: 'Add New Expense',
       editExpense: 'Edit Expense',
+      addIncome: 'Add Income',
+      editIncome: 'Edit Income',
       addAsset: 'Add Asset',
       editAsset: 'Edit Asset',
       addCategory: 'Add Category',
       editCategory: 'Edit Category',
       selectAssetType: 'Select Asset Type',
+      source: 'Source',
+      sourcePlaceholder: 'e.g., Salary, Freelance, etc.',
+      descriptionPlaceholder: 'Optional description',
+      isRecurring: 'Recurring Income',
+      frequency: 'Frequency',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      yearly: 'Yearly',
+      recurring: 'Recurring',
+      oneTime: 'One-time',
       newExpense: 'New Expense',
       updateExpense: 'Update Expense',
       newAsset: 'New Asset',
@@ -100,11 +114,15 @@ const resources = {
       confirmDelete: 'Are you sure you want to delete this expense?',
       confirmDeleteCategory: 'Are you sure you want to delete this category?',
       confirmDeleteAsset: 'Are you sure you want to delete this asset?',
+      confirmDeleteIncome: 'Are you sure you want to delete this income?',
       categoryNameRequired: 'Category name is required',
       requiredFieldsError: 'Category, Amount and Date fields are required.',
       assetRequiredFieldsError: 'Name, Type and Target Amount fields are required.',
+      incomeRequiredFieldsError: 'Source and Amount fields are required.',
       errorFetchingAssets: 'Error fetching assets',
       errorDeletingAsset: 'Error deleting asset',
+      errorFetchingIncomes: 'Error fetching incomes',
+      errorDeletingIncome: 'Error deleting income',
     }
   },
   tr: {
@@ -112,6 +130,7 @@ const resources = {
       // Navigation
       dashboard: 'Gösterge Paneli',
       expenses: 'Giderler',
+      incomes: 'Gelirler',
       assets: 'Varlıklar',
       categories: 'Kategoriler',
       
@@ -134,17 +153,30 @@ const resources = {
       
       // Pages
       expenseTransactions: 'Gider İşlemleri',
+      incomeManagement: 'Gelir Yönetimi',
       assetManagement: 'Varlık Yönetimi',
       categoryManagement: 'Kategori Yönetimi',
       
       // Forms
       addExpense: 'Yeni Gider Ekle',
       editExpense: 'Gider Düzenle',
+      addIncome: 'Gelir Ekle',
+      editIncome: 'Gelir Düzenle',
       addAsset: 'Varlık Ekle',
       editAsset: 'Varlık Düzenle',
       addCategory: 'Kategori Ekle',
       editCategory: 'Kategori Düzenle',
       selectAssetType: 'Varlık Türü Seçin',
+      source: 'Kaynak',
+      sourcePlaceholder: 'örn., Maaş, Serbest Çalışma, vb.',
+      descriptionPlaceholder: 'İsteğe bağlı açıklama',
+      isRecurring: 'Düzenli Gelir',
+      frequency: 'Sıklık',
+      weekly: 'Haftalık',
+      monthly: 'Aylık',
+      yearly: 'Yıllık',
+      recurring: 'Düzenli',
+      oneTime: 'Tek seferlik',
       newExpense: 'Yeni Gider',
       updateExpense: 'Gider Güncelle',
       newAsset: 'Yeni Varlık',
@@ -204,11 +236,15 @@ const resources = {
       confirmDelete: 'Bu gideri silmek istediğinizden emin misiniz?',
       confirmDeleteCategory: 'Bu kategoriyi silmek istediğinizden emin misiniz?',
       confirmDeleteAsset: 'Bu varlığı silmek istediğinizden emin misiniz?',
+      confirmDeleteIncome: 'Bu geliri silmek istediğinizden emin misiniz?',
       categoryNameRequired: 'Kategori adı zorunludur',
       requiredFieldsError: 'Kategori, Tutar ve Tarih alanları zorunludur.',
       assetRequiredFieldsError: 'İsim, Tür ve Hedef Tutar alanları zorunludur.',
+      incomeRequiredFieldsError: 'Kaynak ve Tutar alanları zorunludur.',
       errorFetchingAssets: 'Varlıklar yüklenirken hata oluştu',
       errorDeletingAsset: 'Varlık silinirken hata oluştu',
+      errorFetchingIncomes: 'Gelirler yüklenirken hata oluştu',
+      errorDeletingIncome: 'Gelir silinirken hata oluştu',
     }
   }
 };

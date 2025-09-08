@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
+import Incomes from './pages/Incomes';
 import Assets from './pages/Assets';
 import Categories from './pages/Categories';
 
@@ -12,6 +13,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="expenses" element={<Expenses />} />
+          <Route path="incomes" element={<Incomes />} />
           <Route path="assets" element={<Assets />} />
           <Route path="categories" element={<Categories />} />
         </Route>

@@ -3,6 +3,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Install MongoDB tools for database initialization
+RUN apk add --no-cache bash mongodb-tools
+
 # Copy package files
 COPY package*.json ./
 
@@ -12,8 +15,12 @@ RUN npm install
 # Copy source code (this will be overridden by volume mount)
 COPY . .
 
+# Make start script executable
+COPY start-dev.sh ./
+RUN chmod +x start-dev.sh
+
 # Expose API port
 EXPOSE 3000
 
-# Start development server with nodemon
-CMD ["npm", "run", "dev"]
+# Start with initialization script
+CMD ["./start-dev.sh"]

@@ -9,7 +9,7 @@ const postExpenseSchema = {
       description: { type: 'string' },
       amount: { type: 'number' },
       date: { type: 'string', format: 'date-time' },
-      status: { type: 'string', enum: ['Beklenen', 'Gerçekleşti'] },
+      status: { type: 'string', enum: ['pending', 'completed'] },
     },
   },
 };

@@ -1,6 +1,27 @@
 version: '3.8'
 
 services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7-jammy
+    container_name: budget_mongodb_dev
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: budget-manager
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - budget_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   # UI Service - Development Mode
   ui:
     build:
@@ -43,6 +64,7 @@ services:
       # Mount source code for nodemon
       - ./api/src:/app/src:ro
       - ./api/package.json:/app/package.json:ro
+      - ./api/start-dev.sh:/app/start-dev.sh:ro
     environment:
       NODE_ENV: development
       PORT: 3000
@@ -55,5 +77,29 @@ services:
 
   # Nginx - Development configuration
   nginx:
+    image: nginx:alpine
+    container_name: budget_nginx_dev
+    restart: unless-stopped
+    ports:
+      - "80:80"
     volumes:
       - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - ui
+    networks:
+      - budget_network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  budget_network:
+    driver: bridge

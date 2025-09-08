@@ -33,8 +33,10 @@ const resources = {
       
       // Forms
       addExpense: 'Add New Expense',
+      editExpense: 'Edit Expense',
       addAsset: 'Add Asset',
       newExpense: 'New Expense',
+      updateExpense: 'Update Expense',
       newAsset: 'New Asset',
       amount: 'Amount',
       category: 'Category',
@@ -54,6 +56,7 @@ const resources = {
       
       // Actions
       save: 'Save',
+      update: 'Update',
       cancel: 'Cancel',
       add: 'Add',
       edit: 'Edit',
@@ -85,6 +88,7 @@ const resources = {
       loading: 'Loading...',
       error: 'An error occurred',
       success: 'Operation completed successfully',
+      confirmDelete: 'Are you sure you want to delete this expense?',
       requiredFieldsError: 'Category, Amount and Date fields are required.',
       assetRequiredFieldsError: 'Type, Current Amount and Target Amount fields are required.',
     }
@@ -119,8 +123,10 @@ const resources = {
       
       // Forms
       addExpense: 'Yeni Gider Ekle',
+      editExpense: 'Gider Düzenle',
       addAsset: 'Varlık Ekle',
       newExpense: 'Yeni Gider',
+      updateExpense: 'Gider Güncelle',
       newAsset: 'Yeni Varlık',
       amount: 'Tutar',
       category: 'Kategori',
@@ -140,6 +146,7 @@ const resources = {
       
       // Actions
       save: 'Kaydet',
+      update: 'Güncelle',
       cancel: 'İptal',
       add: 'Ekle',
       edit: 'Düzenle',
@@ -171,6 +178,7 @@ const resources = {
       loading: 'Yükleniyor...',
       error: 'Bir hata oluştu',
       success: 'İşlem başarıyla tamamlandı',
+      confirmDelete: 'Bu gideri silmek istediğinizden emin misiniz?',
       requiredFieldsError: 'Kategori, Tutar ve Tarih alanları zorunludur.',
       assetRequiredFieldsError: 'Tür, Mevcut Tutar ve Hedef Tutar alanları zorunludur.',
     }

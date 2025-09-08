@@ -20,6 +20,11 @@ const expenseSchema = new mongoose.Schema({
     type: Date,
     required: true,
     default: Date.now
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'completed'],
+    default: 'completed'
   }
 }, {
   timestamps: true

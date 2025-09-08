@@ -5,6 +5,7 @@ const connectDB = require('./config/database');
 const expenseRoutes = require('./routes/expense');
 const assetRoutes = require('./routes/asset');
 const summaryRoutes = require('./routes/summary');
+const categoryRoutes = require('./routes/category');
 
 // Connect to MongoDB
 connectDB();
@@ -18,6 +19,7 @@ fastify.register(require('@fastify/cors'), {
 fastify.register(expenseRoutes, { prefix: '/api' });
 fastify.register(assetRoutes, { prefix: '/api' });
 fastify.register(summaryRoutes, { prefix: '/api' });
+fastify.register(categoryRoutes, { prefix: '/api' });
 
 // Health check route
 fastify.get('/', async (request, reply) => {

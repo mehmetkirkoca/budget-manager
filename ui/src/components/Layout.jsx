@@ -1,6 +1,6 @@
 
 import { Link, Outlet } from 'react-router-dom';
-import { FiHome, FiTrendingUp, FiDollarSign, FiMenu } from 'react-icons/fi';
+import { FiHome, FiTrendingUp, FiDollarSign, FiMenu, FiGrid } from 'react-icons/fi';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -13,6 +13,7 @@ const Layout = () => {
     { name: t('dashboard'), icon: FiHome, path: '/' },
     { name: t('expenses'), icon: FiTrendingUp, path: '/expenses' },
     { name: t('assets'), icon: FiDollarSign, path: '/assets' },
+    { name: t('categories'), icon: FiGrid, path: '/categories' },
   ];
 
   return (

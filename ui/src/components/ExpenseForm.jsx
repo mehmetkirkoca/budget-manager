@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getAllCategories } from '../services/categoryService';
 
 const ExpenseForm = ({ onClose, expense, onSave }) => {
   const { t } = useTranslation();
@@ -8,7 +9,26 @@ const ExpenseForm = ({ onClose, expense, onSave }) => {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState('Completed');
+  const [status, setStatus] = useState('completed');
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const data = await getAllCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     if (expense) {
@@ -57,7 +77,23 @@ const ExpenseForm = ({ onClose, expense, onSave }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('category')}</label>
-        <input type="text" id="category" value={category} onChange={e => setCategory(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required />
+        <select 
+          id="category" 
+          value={category} 
+          onChange={e => setCategory(e.target.value)} 
+          className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" 
+          required
+          disabled={loadingCategories}
+        >
+          <option value="">
+            {loadingCategories ? t('loading') : t('selectCategory')}
+          </option>
+          {categories.map(cat => (
+            <option key={cat._id} value={cat.name}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
       </div>
       <div>
         <label htmlFor="amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('amount')}</label>

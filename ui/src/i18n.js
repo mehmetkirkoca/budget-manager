@@ -9,6 +9,7 @@ const resources = {
       dashboard: 'Dashboard',
       expenses: 'Expenses',
       assets: 'Assets',
+      categories: 'Categories',
       
       // Header & Common
       appTitle: 'Budget Manager',
@@ -30,14 +31,18 @@ const resources = {
       // Pages
       expenseTransactions: 'Expense Transactions',
       assetManagement: 'Asset Management',
+      categoryManagement: 'Category Management',
       
       // Forms
       addExpense: 'Add New Expense',
       editExpense: 'Edit Expense',
       addAsset: 'Add Asset',
+      addCategory: 'Add Category',
+      editCategory: 'Edit Category',
       newExpense: 'New Expense',
       updateExpense: 'Update Expense',
       newAsset: 'New Asset',
+      selectCategory: 'Select Category',
       amount: 'Amount',
       category: 'Category',
       date: 'Date',
@@ -53,6 +58,8 @@ const resources = {
       status: 'Status',
       completed: 'Completed',
       pending: 'Pending',
+      color: 'Color',
+      predefinedColors: 'Predefined Colors',
       
       // Actions
       save: 'Save',
@@ -89,6 +96,8 @@ const resources = {
       error: 'An error occurred',
       success: 'Operation completed successfully',
       confirmDelete: 'Are you sure you want to delete this expense?',
+      confirmDeleteCategory: 'Are you sure you want to delete this category?',
+      categoryNameRequired: 'Category name is required',
       requiredFieldsError: 'Category, Amount and Date fields are required.',
       assetRequiredFieldsError: 'Type, Current Amount and Target Amount fields are required.',
     }
@@ -99,6 +108,7 @@ const resources = {
       dashboard: 'Gösterge Paneli',
       expenses: 'Giderler',
       assets: 'Varlıklar',
+      categories: 'Kategoriler',
       
       // Header & Common
       appTitle: 'Bütçe Yöneticisi',
@@ -120,14 +130,18 @@ const resources = {
       // Pages
       expenseTransactions: 'Gider İşlemleri',
       assetManagement: 'Varlık Yönetimi',
+      categoryManagement: 'Kategori Yönetimi',
       
       // Forms
       addExpense: 'Yeni Gider Ekle',
       editExpense: 'Gider Düzenle',
       addAsset: 'Varlık Ekle',
+      addCategory: 'Kategori Ekle',
+      editCategory: 'Kategori Düzenle',
       newExpense: 'Yeni Gider',
       updateExpense: 'Gider Güncelle',
       newAsset: 'Yeni Varlık',
+      selectCategory: 'Kategori Seçin',
       amount: 'Tutar',
       category: 'Kategori',
       date: 'Tarih',
@@ -143,6 +157,8 @@ const resources = {
       status: 'Durum',
       completed: 'Gerçekleşti',
       pending: 'Beklenen',
+      color: 'Renk',
+      predefinedColors: 'Hazır Renkler',
       
       // Actions
       save: 'Kaydet',
@@ -179,6 +195,8 @@ const resources = {
       error: 'Bir hata oluştu',
       success: 'İşlem başarıyla tamamlandı',
       confirmDelete: 'Bu gideri silmek istediğinizden emin misiniz?',
+      confirmDeleteCategory: 'Bu kategoriyi silmek istediğinizden emin misiniz?',
+      categoryNameRequired: 'Kategori adı zorunludur',
       requiredFieldsError: 'Kategori, Tutar ve Tarih alanları zorunludur.',
       assetRequiredFieldsError: 'Tür, Mevcut Tutar ve Hedef Tutar alanları zorunludur.',
     }

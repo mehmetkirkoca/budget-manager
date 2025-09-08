@@ -1,5 +1,6 @@
 const Expense = require('../models/Expense');
 const Asset = require('../models/Asset');
+const Income = require('../models/Income');
 
 const getSummary = async (request, reply) => {
   try {
@@ -44,8 +45,47 @@ const getSummary = async (request, reply) => {
     const totalCurrentAssets = assetsResult.length > 0 ? assetsResult[0].totalCurrent : 0;
     const totalTargetAssets = assetsResult.length > 0 ? assetsResult[0].totalTarget : 0;
 
-    // Calculate savings rate (assuming some monthly income)
-    const monthlyIncome = 5000; // This should come from user settings or income tracking
+    // Calculate monthly income from Income model
+    // Get one-time incomes for current month
+    const monthlyOneTimeResult = await Income.aggregate([
+      {
+        $match: {
+          isActive: true,
+          isRecurring: false,
+          date: {
+            $gte: currentMonth,
+            $lt: nextMonth
+          }
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    // Get recurring incomes (calculate monthly equivalent)
+    const recurringIncomes = await Income.find({ 
+      isActive: true, 
+      isRecurring: true 
+    });
+
+    let recurringTotal = 0;
+    recurringIncomes.forEach(income => {
+      switch(income.frequency) {
+        case 'weekly':
+          recurringTotal += income.amount * 4.33; // Average weeks per month
+          break;
+        case 'monthly':
+          recurringTotal += income.amount;
+          break;
+        case 'yearly':
+          recurringTotal += income.amount / 12;
+          break;
+        default:
+          recurringTotal += income.amount; // Default to monthly
+      }
+    });
+
+    const oneTimeTotal = monthlyOneTimeResult.length > 0 ? monthlyOneTimeResult[0].total : 0;
+    const monthlyIncome = Math.round((oneTimeTotal + recurringTotal) * 100) / 100;
     const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100 : 0;
 
     const summary = {

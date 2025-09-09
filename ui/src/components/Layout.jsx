@@ -1,6 +1,6 @@
 
 import { Link, Outlet } from 'react-router-dom';
-import { FiHome, FiTrendingUp, FiTrendingDown, FiDollarSign, FiMenu, FiGrid } from 'react-icons/fi';
+import { FiHome, FiTrendingUp, FiTrendingDown, FiDollarSign, FiMenu, FiGrid, FiCalendar } from 'react-icons/fi';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';

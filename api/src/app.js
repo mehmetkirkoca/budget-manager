@@ -7,6 +7,7 @@ const assetRoutes = require('./routes/asset');
 const summaryRoutes = require('./routes/summary');
 const categoryRoutes = require('./routes/category');
 const incomeRoutes = require('./routes/income');
+const recurringPaymentRoutes = require('./routes/recurringPayment');
 
 // Connect to MongoDB
 connectDB();
@@ -22,6 +23,7 @@ fastify.register(assetRoutes, { prefix: '/api' });
 fastify.register(summaryRoutes, { prefix: '/api' });
 fastify.register(categoryRoutes, { prefix: '/api' });
 fastify.register(incomeRoutes, { prefix: '/api' });
+fastify.register(recurringPaymentRoutes, { prefix: '/api' });
 
 // Health check route
 fastify.get('/', async (request, reply) => {

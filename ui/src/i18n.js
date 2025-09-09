@@ -11,6 +11,7 @@ const resources = {
       incomes: 'Incomes',
       assets: 'Assets',
       categories: 'Categories',
+      calendar: 'Calendar',
       
       // Header & Common
       appTitle: 'Budget Manager',
@@ -134,6 +135,7 @@ const resources = {
       incomes: 'Gelirler',
       assets: 'Varlıklar',
       categories: 'Kategoriler',
+      calendar: 'Takvim',
       
       // Header & Common
       appTitle: 'Bütçe Yöneticisi',

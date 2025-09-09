@@ -12,6 +12,7 @@ const resources = {
       assets: 'Assets',
       categories: 'Categories',
       calendar: 'Calendar',
+      recurringPayments: 'Recurring Payments',
       
       // Header & Common
       appTitle: 'Budget Manager',
@@ -136,6 +137,7 @@ const resources = {
       assets: 'Varlıklar',
       categories: 'Kategoriler',
       calendar: 'Takvim',
+      recurringPayments: 'Tekrarlayan Ödemeler',
       
       // Header & Common
       appTitle: 'Bütçe Yöneticisi',

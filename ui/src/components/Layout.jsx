@@ -1,6 +1,6 @@
 
 import { Link, Outlet } from 'react-router-dom';
-import { FiHome, FiTrendingUp, FiTrendingDown, FiDollarSign, FiMenu, FiGrid, FiCalendar } from 'react-icons/fi';
+import { FiHome, FiTrendingUp, FiTrendingDown, FiDollarSign, FiMenu, FiGrid, FiClock } from 'react-icons/fi';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -15,6 +15,7 @@ const Layout = () => {
     { name: t('incomes'), icon: FiTrendingDown, path: '/incomes' },
     { name: t('assets'), icon: FiDollarSign, path: '/assets' },
     { name: t('categories'), icon: FiGrid, path: '/categories' },
+    { name: t('recurringPayments'), icon: FiClock, path: '/recurring-payments' },
   ];
 
   return (

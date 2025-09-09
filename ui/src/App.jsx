@@ -5,6 +5,7 @@ import Expenses from './pages/Expenses';
 import Incomes from './pages/Incomes';
 import Assets from './pages/Assets';
 import Categories from './pages/Categories';
+import RecurringPayments from './pages/RecurringPayments';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="incomes" element={<Incomes />} />
           <Route path="assets" element={<Assets />} />
           <Route path="categories" element={<Categories />} />
+          <Route path="recurring-payments" element={<RecurringPayments />} />
         </Route>
       </Routes>
     </div>

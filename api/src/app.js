@@ -1,6 +1,7 @@
 require('dotenv').config();
 const fastify = require('fastify')({ logger: true });
 const connectDB = require('./config/database');
+const { autoProcessMiddleware } = require('./middleware/autoProcessMiddleware');
 
 const expenseRoutes = require('./routes/expense');
 const assetRoutes = require('./routes/asset');
@@ -8,6 +9,7 @@ const summaryRoutes = require('./routes/summary');
 const categoryRoutes = require('./routes/category');
 const incomeRoutes = require('./routes/income');
 const recurringPaymentRoutes = require('./routes/recurringPayment');
+const autoProcessRoutes = require('./routes/autoProcess');
 
 // Connect to MongoDB
 connectDB();
@@ -17,6 +19,9 @@ fastify.register(require('@fastify/cors'), {
   origin: '*', // Allow all origins for now
 });
 
+// Register auto-process middleware
+fastify.addHook('preHandler', autoProcessMiddleware);
+
 // Register routes
 fastify.register(expenseRoutes, { prefix: '/api' });
 fastify.register(assetRoutes, { prefix: '/api' });
@@ -24,6 +29,7 @@ fastify.register(summaryRoutes, { prefix: '/api' });
 fastify.register(categoryRoutes, { prefix: '/api' });
 fastify.register(incomeRoutes, { prefix: '/api' });
 fastify.register(recurringPaymentRoutes, { prefix: '/api' });
+fastify.register(autoProcessRoutes, { prefix: '/api' });
 
 // Health check route
 fastify.get('/', async (request, reply) => {

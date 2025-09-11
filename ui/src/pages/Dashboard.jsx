@@ -4,6 +4,7 @@ import SummaryCard from '../components/SummaryCard';
 import ExpensePieChart from '../components/ExpensePieChart';
 import AssetProgress from '../components/AssetProgress';
 import DashboardCalendar from '../components/DashboardCalendar';
+import AutoProcessSummary from '../components/AutoProcessSummary';
 import { getSummary } from '../services/dashboardService';
 import { getAllExpenses } from '../services/expenseService';
 import { getAllAssets } from '../services/assetService';
@@ -84,9 +85,14 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Calendar */}
-      <div className="grid grid-cols-1 gap-6">
-        <DashboardCalendar />
+      {/* Calendar and Auto-Process Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <DashboardCalendar />
+        </div>
+        <div>
+          <AutoProcessSummary />
+        </div>
       </div>
     </div>
   );

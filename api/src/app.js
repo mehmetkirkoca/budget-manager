@@ -12,6 +12,7 @@ const recurringPaymentRoutes = require('./routes/recurringPayment');
 const autoProcessRoutes = require('./routes/autoProcess');
 const creditCardRoutes = require('./routes/creditCard');
 const creditCardInstallmentRoutes = require('./routes/creditCardInstallment');
+const exportRoutes = require('./routes/export');
 
 // Connect to MongoDB
 connectDB();
@@ -34,6 +35,7 @@ fastify.register(recurringPaymentRoutes, { prefix: '/api' });
 fastify.register(autoProcessRoutes, { prefix: '/api' });
 fastify.register(creditCardRoutes, { prefix: '/api' });
 fastify.register(creditCardInstallmentRoutes, { prefix: '/api' });
+fastify.register(exportRoutes, { prefix: '/api' });
 
 // Health check route
 fastify.get('/', async (request, reply) => {

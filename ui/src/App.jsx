@@ -8,6 +8,7 @@ import Categories from './pages/Categories';
 import RecurringPayments from './pages/RecurringPayments';
 import CreditCards from './pages/CreditCards';
 import CreditCardForm from './components/CreditCardForm';
+import Export from './pages/Export';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="recurring-payments" element={<RecurringPayments />} />
           <Route path="credit-cards" element={<CreditCards />} />
           <Route path="credit-cards/new" element={<CreditCardForm />} />
+          <Route path="export" element={<Export />} />
         </Route>
       </Routes>
     </div>

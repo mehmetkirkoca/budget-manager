@@ -225,7 +225,31 @@ const resources = {
       upcomingPayments: 'Upcoming Payments',
       more: 'more',
       addCard: 'Add Card',
-      manageCards: 'Manage Cards'
+      manageCards: 'Manage Cards',
+      
+      // Export translations
+      dataExport: 'Data Export',
+      exportDescription: 'Export your financial data in various formats',
+      exportSummary: 'Export Summary',
+      totalRecords: 'Total Records',
+      lastUpdated: 'Last Updated',
+      exportOptions: 'Export Options',
+      exportType: 'Export Type',
+      exportAllData: 'Export All Data',
+      exportSpecificCollection: 'Export Specific Collection',
+      exportByDateRange: 'Export by Date Range',
+      selectCollection: 'Select Collection',
+      format: 'Format',
+      startDate: 'Start Date',
+      endDate: 'End Date',
+      exporting: 'Exporting...',
+      exportData: 'Export Data',
+      exportInformation: 'Export Information',
+      exportInfo1: 'All exports include metadata and timestamps for data integrity',
+      exportInfo2: 'JSON format preserves all data types and relationships',
+      exportInfo3: 'CSV format is suitable for spreadsheet applications',
+      exportInfo4: 'Date range exports include transactions within the specified period',
+      export: 'Export'
     }
   },
   tr: {
@@ -450,7 +474,31 @@ const resources = {
       upcomingPayments: 'Yaklaşan Ödemeler',
       more: 'tane daha',
       addCard: 'Kart Ekle',
-      manageCards: 'Kartları Yönet'
+      manageCards: 'Kartları Yönet',
+      
+      // Export translations
+      dataExport: 'Veri Dışa Aktarma',
+      exportDescription: 'Finansal verilerinizi çeşitli formatlarda dışa aktarın',
+      exportSummary: 'Dışa Aktarma Özeti',
+      totalRecords: 'Toplam Kayıt',
+      lastUpdated: 'Son Güncelleme',
+      exportOptions: 'Dışa Aktarma Seçenekleri',
+      exportType: 'Dışa Aktarma Türü',
+      exportAllData: 'Tüm Verileri Dışa Aktar',
+      exportSpecificCollection: 'Belirli Koleksiyonu Dışa Aktar',
+      exportByDateRange: 'Tarih Aralığına Göre Dışa Aktar',
+      selectCollection: 'Koleksiyon Seç',
+      format: 'Format',
+      startDate: 'Başlangıç Tarihi',
+      endDate: 'Bitiş Tarihi',
+      exporting: 'Dışa aktarılıyor...',
+      exportData: 'Veriyi Dışa Aktar',
+      exportInformation: 'Dışa Aktarma Bilgileri',
+      exportInfo1: 'Tüm dışa aktarmalar veri bütünlüğü için metadata ve zaman damgası içerir',
+      exportInfo2: 'JSON formatı tüm veri türlerini ve ilişkileri korur',
+      exportInfo3: 'CSV formatı hesap tablosu uygulamaları için uygundur',
+      exportInfo4: 'Tarih aralığı dışa aktarmaları belirtilen dönemdeki işlemleri içerir',
+      export: 'Dışa Aktar'
     }
   }
 };

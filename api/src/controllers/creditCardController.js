@@ -87,14 +87,7 @@ const updateCreditCard = async (request, reply) => {
     const { id } = request.params;
     const updateData = request.body;
     
-    // Validate that available limit doesn't exceed total limit
-    if (updateData.availableLimit && updateData.totalLimit && 
-        updateData.availableLimit > updateData.totalLimit) {
-      return reply.status(400).send({ 
-        error: 'Bad Request', 
-        message: 'Available limit cannot exceed total limit' 
-      });
-    }
+    // No manual validation - let model handle it
     
     const creditCard = await CreditCard.findByIdAndUpdate(
       id, 
@@ -107,6 +100,11 @@ const updateCreditCard = async (request, reply) => {
         error: 'Not Found', 
         message: 'Credit card not found' 
       });
+    }
+    
+    // Update available limit based on current balance
+    if (updateData.currentBalance !== undefined || updateData.totalLimit !== undefined) {
+      await creditCard.updateAvailableLimit();
     }
     
     reply.send(creditCard);

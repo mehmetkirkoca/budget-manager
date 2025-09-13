@@ -35,13 +35,7 @@ const creditCardSchema = new mongoose.Schema({
   availableLimit: {
     type: Number,
     required: true,
-    min: 0,
-    validate: {
-      validator: function(v) {
-        return v <= this.totalLimit;
-      },
-      message: 'Available limit cannot exceed total limit'
-    }
+    min: 0
   },
   currentBalance: {
     type: Number,

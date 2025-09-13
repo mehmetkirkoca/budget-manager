@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost/api';
+const API_BASE_URL = 'http://localhost:3000/api';
 
 // GET summary data
 export const getSummary = async () => {

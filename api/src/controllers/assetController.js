@@ -1,9 +1,34 @@
 const Asset = require('../models/Asset');
+const assetConversionService = require('../services/assetConversionService');
 
 const getAllAssets = async (request, reply) => {
   try {
     const assets = await Asset.find().sort({ createdAt: -1 });
-    reply.send(assets);
+
+    // Add TRY conversion values
+    const assetsWithConversion = await Promise.all(
+      assets.map(async (asset) => {
+        try {
+          const conversion = await assetConversionService.convertToTRY(asset);
+          return {
+            ...asset.toJSON(),
+            currentValueTRY: conversion.currentValueTRY,
+            targetValueTRY: conversion.targetValueTRY,
+            conversionRate: conversion.conversionRate
+          };
+        } catch (error) {
+          console.error(`Conversion failed for asset ${asset._id}:`, error);
+          return {
+            ...asset.toJSON(),
+            currentValueTRY: asset.unit === 'TRY' ? asset.currentAmount : 0,
+            targetValueTRY: asset.unit === 'TRY' ? asset.targetAmount : 0,
+            conversionRate: asset.unit === 'TRY' ? 1 : 0
+          };
+        }
+      })
+    );
+
+    reply.send(assetsWithConversion);
   } catch (err) {
     reply.status(500).send({ error: err.message });
   }
@@ -11,7 +36,7 @@ const getAllAssets = async (request, reply) => {
 
 const createAsset = async (request, reply) => {
   try {
-    const { name, type, description, currentAmount, targetAmount, unit } = request.body;
+    const { name, type, description, currentAmount, targetAmount, unit, assetType, goldKarat } = request.body;
     const newAsset = new Asset({
       name,
       type,
@@ -19,8 +44,10 @@ const createAsset = async (request, reply) => {
       currentAmount: currentAmount || 0,
       targetAmount,
       unit: unit || 'TRY',
+      assetType: assetType || 'currency',
+      goldKarat
     });
-    
+
     await newAsset.save();
     reply.status(201).send(newAsset);
   } catch (err) {
@@ -31,18 +58,23 @@ const createAsset = async (request, reply) => {
 const updateAsset = async (request, reply) => {
   try {
     const { id } = request.params;
-    const { name, type, description, currentAmount, targetAmount, unit } = request.body;
-    
+    const { name, type, description, currentAmount, targetAmount, unit, assetType, goldKarat } = request.body;
+
+    const updateData = { name, type, description, currentAmount, targetAmount, unit, assetType };
+    if (goldKarat !== undefined) {
+      updateData.goldKarat = goldKarat;
+    }
+
     const asset = await Asset.findByIdAndUpdate(
       id,
-      { name, type, description, currentAmount, targetAmount, unit },
+      updateData,
       { new: true, runValidators: true }
     );
-    
+
     if (!asset) {
       return reply.status(404).send({ error: 'Asset not found' });
     }
-    
+
     reply.send(asset);
   } catch (err) {
     reply.status(500).send({ error: err.message });

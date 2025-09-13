@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiPlus, FiCreditCard, FiBarChart, FiCalendar, FiAlertCircle } from 'react-icons/fi';
+import { FiPlus, FiCreditCard, FiBarChart, FiCalendar, FiAlertCircle, FiTrash } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { creditCardService, creditCardUtils } from '../services/creditCardService';
 import Modal from '../components/Modal';
@@ -367,6 +367,17 @@ const CreditCardItem = ({ card, onDelete, onAddInstallment, onEdit, t }) => {
           className="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-center text-sm transition-colors"
         >
           {t('addInstallment')}
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm(t('confirmDeleteCard'))) {
+              onDelete();
+            }
+          }}
+          className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-center text-sm transition-colors"
+          title={t('delete')}
+        >
+          <FiTrash />
         </button>
       </div>
     </div>

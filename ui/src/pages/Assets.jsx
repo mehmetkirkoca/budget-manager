@@ -70,18 +70,59 @@ const Assets = () => {
   };
 
   const columns = [
-    { header: t('name'), key: 'name' },
+    {
+      header: t('name'),
+      key: 'name',
+      render: (row) => (
+        <div>
+          <div className="font-medium">{row.name}</div>
+          {row.assetType === 'gold' && row.goldKarat && (
+            <div className="text-xs text-amber-600 dark:text-amber-400">
+              {row.goldKarat} ayar altın
+            </div>
+          )}
+          {row.assetType && row.assetType !== 'currency' && row.assetType !== 'gold' && (
+            <div className="text-xs text-blue-600 dark:text-blue-400">
+              {row.assetType}
+            </div>
+          )}
+        </div>
+      )
+    },
     { header: t('type'), key: 'type', render: (row) => t(row.type) },
     { header: t('description'), key: 'description' },
     {
       header: t('currentAmount'),
       key: 'currentAmount',
-      render: (row) => `${row.currentAmount.toLocaleString('tr-TR')} ${row.unit || 'TRY'}`
+      render: (row) => (
+        <div>
+          <div className="font-medium">{row.currentAmount.toLocaleString('tr-TR')} {row.unit || 'TRY'}</div>
+          {row.unit !== 'TRY' && row.currentValueTRY && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              ≈ {row.currentValueTRY.toLocaleString('tr-TR')} TRY
+              {row.conversionRate && (
+                <span className="text-xs ml-1">
+                  ({row.conversionRate.toLocaleString('tr-TR')} TRY/{row.unit})
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )
     },
     {
       header: t('targetAmount'),
       key: 'targetAmount',
-      render: (row) => `${row.targetAmount.toLocaleString('tr-TR')} ${row.unit || 'TRY'}`
+      render: (row) => (
+        <div>
+          <div className="font-medium">{row.targetAmount.toLocaleString('tr-TR')} {row.unit || 'TRY'}</div>
+          {row.unit !== 'TRY' && row.targetValueTRY && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              ≈ {row.targetValueTRY.toLocaleString('tr-TR')} TRY
+            </div>
+          )}
+        </div>
+      )
     },
     {
         header: t('progress'),

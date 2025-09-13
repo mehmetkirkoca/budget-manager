@@ -1,6 +1,7 @@
 const Expense = require('../models/Expense');
 const Asset = require('../models/Asset');
 const Income = require('../models/Income');
+const assetConversionService = require('../services/assetConversionService');
 
 const getSummary = async (request, reply) => {
   try {
@@ -31,19 +32,12 @@ const getSummary = async (request, reply) => {
     ]);
     const monthlyExpenses = monthlyExpensesResult.length > 0 ? monthlyExpensesResult[0].total : 0;
 
-    // Get asset totals
-    const assetsResult = await Asset.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalCurrent: { $sum: '$currentAmount' },
-          totalTarget: { $sum: '$targetAmount' }
-        }
-      }
-    ]);
-    
-    const totalCurrentAssets = assetsResult.length > 0 ? assetsResult[0].totalCurrent : 0;
-    const totalTargetAssets = assetsResult.length > 0 ? assetsResult[0].totalTarget : 0;
+    // Get all assets and convert to TRY
+    const allAssets = await Asset.find({});
+    const assetConversions = await assetConversionService.convertAssetsToTRY(allAssets);
+
+    const totalCurrentAssets = assetConversions.totalCurrentTRY;
+    const totalTargetAssets = assetConversions.totalTargetTRY;
 
     // Calculate monthly income from Income model
     // Get one-time incomes for current month

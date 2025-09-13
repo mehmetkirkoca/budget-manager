@@ -30,6 +30,17 @@ const assetSchema = new mongoose.Schema({
     type: String,
     default: 'TRY',
     trim: true
+  },
+  assetType: {
+    type: String,
+    enum: ['currency', 'gold', 'silver', 'crypto', 'stock'],
+    default: 'currency'
+  },
+  goldKarat: {
+    type: Number,
+    min: 8,
+    max: 24,
+    required: function() { return this.assetType === 'gold'; }
   }
 }, {
   timestamps: true

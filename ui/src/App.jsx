@@ -6,6 +6,8 @@ import Incomes from './pages/Incomes';
 import Assets from './pages/Assets';
 import Categories from './pages/Categories';
 import RecurringPayments from './pages/RecurringPayments';
+import CreditCards from './pages/CreditCards';
+import CreditCardForm from './components/CreditCardForm';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
           <Route path="assets" element={<Assets />} />
           <Route path="categories" element={<Categories />} />
           <Route path="recurring-payments" element={<RecurringPayments />} />
+          <Route path="credit-cards" element={<CreditCards />} />
+          <Route path="credit-cards/new" element={<CreditCardForm />} />
         </Route>
       </Routes>
     </div>

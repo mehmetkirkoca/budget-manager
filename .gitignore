@@ -27,6 +27,7 @@ lerna-debug.log*
 # Database
 *.db
 *.db-journal
+api/data/
 
 # Editor directories and files
 .vscode/*

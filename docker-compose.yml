@@ -7,11 +7,9 @@ services:
     container_name: budget_mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
       MONGO_INITDB_DATABASE: budget-manager
     volumes:
-      - mongodb_data:/data/db
+      - ./api/data:/data/db
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     networks:
       - budget_network
@@ -32,7 +30,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      MONGODB_URI: mongodb://admin:password123@mongodb:27017/budget-manager?authSource=admin
+      MONGODB_URI: mongodb://mongodb:27017/budget-manager
     depends_on:
       mongodb:
         condition: service_healthy
@@ -45,19 +43,24 @@ services:
       retries: 3
       start_period: 40s
 
-  # UI Service
+  # UI Service (Development)
   ui:
     build:
       context: ./ui
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: /api
+      dockerfile: Dockerfile.dev
     container_name: budget_ui
     restart: unless-stopped
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=/api
     networks:
       - budget_network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -83,10 +86,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-
-volumes:
-  mongodb_data:
-    driver: local
 
 networks:
   budget_network:

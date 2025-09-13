@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'http://localhost/api';
 
 // Get all recurring payments
 export const getAllRecurringPayments = async () => {

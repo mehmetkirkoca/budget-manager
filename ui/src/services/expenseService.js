@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'http://localhost/api';
 
 // GET all expenses
 export const getAllExpenses = async () => {

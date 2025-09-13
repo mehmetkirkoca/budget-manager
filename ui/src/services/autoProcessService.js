@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'http://localhost/api';
 
 // Get auto-processing status
 export const getAutoProcessStatus = async () => {

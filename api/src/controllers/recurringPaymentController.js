@@ -118,13 +118,23 @@ const deleteRecurringPayment = async (request, reply) => {
 
 const getUpcomingPayments = async (request, reply) => {
   try {
-    const { startDate, endDate, days = 30 } = request.query;
-    
+    const { startDate, endDate, days = 30, includeCalculatedAmounts = true } = request.query;
+
     const start = startDate ? new Date(startDate) : new Date();
     const end = endDate ? new Date(endDate) : new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-    
-    const payments = await RecurringPayment.getUpcoming(start, end);
-    
+
+    // Use calculated amounts by default for better UX
+    const shouldIncludeCalculatedAmounts = includeCalculatedAmounts === 'true' || includeCalculatedAmounts === true;
+
+    let payments;
+    if (shouldIncludeCalculatedAmounts) {
+      payments = await RecurringPayment.getUpcomingWithCalculatedAmounts(start, end);
+    } else {
+      payments = await RecurringPayment.getUpcoming(start, end);
+      // Convert to plain objects for consistent response format
+      payments = payments.map(payment => payment.toObject());
+    }
+
     reply.send(payments);
   } catch (err) {
     reply.status(500).send({ error: err.message });

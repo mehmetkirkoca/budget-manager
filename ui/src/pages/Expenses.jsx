@@ -4,6 +4,7 @@ import DynamicTable from '../components/DynamicTable';
 import Modal from '../components/Modal';
 import ExpenseForm from '../components/ExpenseForm';
 import { getAllExpenses, createExpense, updateExpense, deleteExpense } from '../services/expenseService';
+import { getAllCategories } from '../services/categoryService';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 
@@ -12,28 +13,53 @@ const Expenses = () => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [expenses, setExpenses] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     document.title = `${t('expenses')} - ${t('appTitle')}`;
   }, [t]);
 
-  // Fetch expenses from API on component mount
+  // Fetch expenses and categories from API on component mount
   useEffect(() => {
-    fetchExpenses();
+    fetchData();
   }, []);
 
-  const fetchExpenses = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const data = await getAllExpenses();
-      setExpenses(data);
+      const [expensesData, categoriesData] = await Promise.all([
+        getAllExpenses(),
+        getAllCategories()
+      ]);
+      setExpenses(expensesData);
+      setCategories(categoriesData);
     } catch (error) {
-      console.error('Failed to fetch expenses:', error);
-      // You could show an error message to the user here
+      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to get category name from populated category object or fallback
+  const getCategoryDisplayName = (categoryValue) => {
+    // If it's a populated object with name property
+    if (categoryValue && typeof categoryValue === 'object' && categoryValue.name) {
+      return categoryValue.name;
+    }
+
+    // If it's a string name (legacy data)
+    if (typeof categoryValue === 'string' && categoryValue.length < 24) {
+      return categoryValue;
+    }
+
+    // If it's an ObjectId string, find the category name
+    if (typeof categoryValue === 'string' && categoryValue.length === 24) {
+      const category = categories.find(cat => cat._id === categoryValue);
+      return category ? category.name : categoryValue;
+    }
+
+    return categoryValue || 'Unknown';
   };
 
   const handleEdit = (expense) => {
@@ -79,7 +105,11 @@ const Expenses = () => {
   };
 
   const columns = [
-    { header: t('category'), key: 'category' },
+    {
+      header: t('category'),
+      key: 'category',
+      render: (row) => getCategoryDisplayName(row.category)
+    },
     { header: t('description'), key: 'description' },
     {
       header: t('amount'),

@@ -45,9 +45,32 @@ const DashboardCalendar = () => {
 
   const getPaymentsForDate = (date) => {
     const dateStr = date.toDateString();
-    return upcomingPayments.filter(payment => 
+    return upcomingPayments.filter(payment =>
       new Date(payment.nextDue).toDateString() === dateStr
     );
+  };
+
+  const getPaymentDisplayAmount = (payment) => {
+    // Use effective amount if available (for dynamic payments)
+    if (payment.effectiveAmount !== undefined && payment.effectiveAmount > 0) {
+      return payment.effectiveAmount;
+    }
+    // Fallback to original amount
+    return payment.amount;
+  };
+
+  const getPaymentDisplayInfo = (payment) => {
+    const amount = getPaymentDisplayAmount(payment);
+    const isDynamic = payment.amountInfo?.isDynamic;
+    const isCalculated = payment.amountInfo?.isCalculated;
+
+    return {
+      amount: amount,
+      isDynamic: isDynamic,
+      isCalculated: isCalculated,
+      displayText: `${amount.toLocaleString('tr-TR')} TRY`,
+      metadata: payment.amountInfo?.metadata
+    };
   };
 
   const formatWeekRange = () => {
@@ -122,13 +145,20 @@ const DashboardCalendar = () => {
                   </div>
                   {dayPayments.length > 0 && (
                     <div className="flex flex-col items-center mt-1 space-y-1">
-                      {dayPayments.slice(0, 2).map((payment, pIndex) => (
-                        <div
-                          key={pIndex}
-                          className="w-2 h-2 rounded-full bg-red-400"
-                          title={`${payment.name} - ${payment.amount.toLocaleString('tr-TR')} TRY`}
-                        />
-                      ))}
+                      {dayPayments.slice(0, 2).map((payment, pIndex) => {
+                        const displayInfo = getPaymentDisplayInfo(payment);
+                        return (
+                          <div
+                            key={pIndex}
+                            className={`w-2 h-2 rounded-full ${
+                              displayInfo.isDynamic ? 'bg-orange-400' : 'bg-red-400'
+                            }`}
+                            title={`${payment.name} - ${displayInfo.displayText}${
+                              displayInfo.isDynamic ? ' (Hesaplanmış)' : ''
+                            }`}
+                          />
+                        );
+                      })}
                       {dayPayments.length > 2 && (
                         <div className="text-xs text-gray-500">+{dayPayments.length - 2}</div>
                       )}
@@ -151,28 +181,49 @@ const DashboardCalendar = () => {
                   const dueDate = new Date(payment.nextDue);
                   const today = new Date();
                   const daysUntil = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-                  
+                  const displayInfo = getPaymentDisplayInfo(payment);
+
                   return (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <div className="flex items-center space-x-3">
-                        <FiClock className={`${
-                          daysUntil <= 1 ? 'text-red-500' : daysUntil <= 3 ? 'text-yellow-500' : 'text-gray-400'
-                        }`} size={16} />
+                        <div className="flex items-center space-x-2">
+                          <FiClock className={`${
+                            daysUntil <= 1 ? 'text-red-500' : daysUntil <= 3 ? 'text-yellow-500' : 'text-gray-400'
+                          }`} size={16} />
+                          {displayInfo.isDynamic && (
+                            <div
+                              className="w-3 h-3 rounded-full bg-orange-400"
+                              title="Dinamik hesaplanan tutar"
+                            />
+                          )}
+                        </div>
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                          <div className="font-medium text-gray-900 dark:text-gray-100 flex items-center">
                             {payment.name}
+                            {displayInfo.isDynamic && displayInfo.isCalculated && (
+                              <span className="ml-2 text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                                Hesaplanmış
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
                             {dueDate.toLocaleDateString('tr-TR')}
                             {daysUntil === 0 && <span className="ml-2 text-red-600 font-medium">Today</span>}
                             {daysUntil === 1 && <span className="ml-2 text-yellow-600 font-medium">Tomorrow</span>}
                             {daysUntil > 1 && <span className="ml-2 text-gray-500">{daysUntil} days</span>}
+                            {displayInfo.metadata?.cardName && (
+                              <span className="ml-2 text-xs text-blue-600">
+                                ({displayInfo.metadata.bankName})
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold text-gray-900 dark:text-gray-100">
-                          {payment.amount.toLocaleString('tr-TR')} TRY
+                        <div className={`font-semibold text-gray-900 dark:text-gray-100 ${
+                          displayInfo.isDynamic ? 'text-orange-700 dark:text-orange-300' : ''
+                        }`}>
+                          {displayInfo.displayText}
                         </div>
                         {payment.category && (
                           <div className="text-sm text-gray-500 dark:text-gray-400">

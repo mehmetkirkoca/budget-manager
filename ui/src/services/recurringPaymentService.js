@@ -43,12 +43,13 @@ export const deleteRecurringPayment = async (id) => {
 };
 
 // Get upcoming payments
-export const getUpcomingPayments = async (startDate, endDate, days = 30) => {
+export const getUpcomingPayments = async (startDate, endDate, days = 30, includeCalculatedAmounts = true) => {
   const params = new URLSearchParams();
   if (startDate) params.append('startDate', startDate);
   if (endDate) params.append('endDate', endDate);
   if (days) params.append('days', days.toString());
-  
+  if (includeCalculatedAmounts !== undefined) params.append('includeCalculatedAmounts', includeCalculatedAmounts.toString());
+
   const response = await fetch(`${API_URL}/recurring-payments/upcoming?${params}`);
   if (!response.ok) throw new Error('Failed to fetch upcoming payments');
   return response.json();

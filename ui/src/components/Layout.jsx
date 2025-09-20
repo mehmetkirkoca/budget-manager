@@ -1,6 +1,6 @@
 
 import { Link, Outlet } from 'react-router-dom';
-import { FiHome, FiTrendingUp, FiTrendingDown, FiDollarSign, FiMenu, FiGrid, FiClock, FiCreditCard, FiDownload } from 'react-icons/fi';
+import { FiHome, FiTrendingUp, FiTrendingDown, FiDollarSign, FiMenu, FiGrid, FiClock, FiCreditCard, FiDownload, FiUpload } from 'react-icons/fi';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -18,6 +18,7 @@ const Layout = () => {
     { name: t('categories'), icon: FiGrid, path: '/categories' },
     { name: t('expenses'), icon: FiTrendingDown, path: '/expenses' },
     { name: t('export'), icon: FiDownload, path: '/export' },
+    { name: t('import'), icon: FiUpload, path: '/import' },
   ];
 
   return (

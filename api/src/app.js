@@ -13,6 +13,7 @@ const autoProcessRoutes = require('./routes/autoProcess');
 const creditCardRoutes = require('./routes/creditCard');
 const creditCardInstallmentRoutes = require('./routes/creditCardInstallment');
 const exportRoutes = require('./routes/export');
+const importRoutes = require('./routes/import');
 
 // Connect to MongoDB
 connectDB();
@@ -36,6 +37,7 @@ fastify.register(autoProcessRoutes, { prefix: '/api' });
 fastify.register(creditCardRoutes, { prefix: '/api' });
 fastify.register(creditCardInstallmentRoutes, { prefix: '/api' });
 fastify.register(exportRoutes, { prefix: '/api' });
+fastify.register(importRoutes, { prefix: '/api/import' });
 
 // Health check route
 fastify.get('/', async (request, reply) => {

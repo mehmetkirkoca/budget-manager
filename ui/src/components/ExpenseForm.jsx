@@ -32,7 +32,17 @@ const ExpenseForm = ({ onClose, expense, onSave }) => {
 
   useEffect(() => {
     if (expense) {
-      setCategory(expense.category || '');
+      // Handle category - could be ObjectId string or populated object
+      let categoryId = '';
+      if (expense.category) {
+        if (typeof expense.category === 'object' && expense.category._id) {
+          categoryId = expense.category._id;
+        } else if (typeof expense.category === 'string') {
+          categoryId = expense.category;
+        }
+      }
+
+      setCategory(categoryId);
       setAmount(expense.amount?.toString() || '');
       setDate(expense.date ? new Date(expense.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       setDescription(expense.description || '');
@@ -89,7 +99,7 @@ const ExpenseForm = ({ onClose, expense, onSave }) => {
             {loadingCategories ? t('loading') : t('selectCategory')}
           </option>
           {categories.map(cat => (
-            <option key={cat._id} value={cat.name}>
+            <option key={cat._id} value={cat._id}>
               {cat.name}
             </option>
           ))}

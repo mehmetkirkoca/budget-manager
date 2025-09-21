@@ -31,12 +31,24 @@ const ExpensePieChart = ({ data }) => {
   const processExpenseData = () => {
     // Group expenses by category
     const categoryTotals = {};
-    
+
     data.forEach(expense => {
-      if (categoryTotals[expense.category]) {
-        categoryTotals[expense.category] += expense.amount;
-      } else {
-        categoryTotals[expense.category] = expense.amount;
+      // Handle category - could be ObjectId string or populated object
+      let categoryId = '';
+      if (expense.category) {
+        if (typeof expense.category === 'object' && expense.category._id) {
+          categoryId = expense.category._id;
+        } else if (typeof expense.category === 'string') {
+          categoryId = expense.category;
+        }
+      }
+
+      if (categoryId) {
+        if (categoryTotals[categoryId]) {
+          categoryTotals[categoryId] += expense.amount;
+        } else {
+          categoryTotals[categoryId] = expense.amount;
+        }
       }
     });
 
@@ -68,6 +80,7 @@ const ExpensePieChart = ({ data }) => {
                       fill="#8884d8"
                       dataKey="value"
                       nameKey="name"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
                       {chartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />

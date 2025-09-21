@@ -268,7 +268,54 @@ const resources = {
       exportInfo2: 'JSON format preserves all data types and relationships',
       exportInfo3: 'CSV format is suitable for spreadsheet applications',
       exportInfo4: 'Date range exports include transactions within the specified period',
-      export: 'Export'
+      export: 'Export',
+
+      // Notes
+      notes: 'Notes',
+      createNote: 'Create Note',
+      editNote: 'Edit Note',
+      title: 'Title',
+      content: 'Content',
+      enterTitle: 'Enter title',
+      enterContent: 'Enter content',
+      archive: 'Archive',
+      unarchive: 'Unarchive',
+      reminderDate: 'Reminder Date',
+      activeNotes: 'active notes',
+      archivedNotes: 'archived notes',
+      showActive: 'Show Active',
+      showArchived: 'Show Archived',
+      searchNotes: 'Search notes...',
+      noNotes: 'No notes found',
+      noArchivedNotes: 'No archived notes found',
+      createFirstNote: 'Create your first note',
+      showMore: 'Show more',
+      showLess: 'Show less',
+      all: 'All',
+      confirmDeleteNote: 'Are you sure you want to delete this note?',
+      errorSavingNote: 'Error saving note',
+      errorDeletingNote: 'Error deleting note',
+
+      // Note Categories
+      'noteCategory.personal': 'Personal',
+      'noteCategory.finance': 'Finance',
+      'noteCategory.business': 'Business',
+      'noteCategory.todo': 'To-Do',
+      'noteCategory.important': 'Important',
+
+      // Priorities
+      'priority.low': 'Low',
+      'priority.medium': 'Medium',
+      'priority.high': 'High',
+
+      // Colors
+      'color.blue': 'Blue',
+      'color.green': 'Green',
+      'color.yellow': 'Yellow',
+      'color.red': 'Red',
+      'color.purple': 'Purple',
+      'color.gray': 'Gray',
+      emptyColumn: 'Empty column'
     }
   },
   tr: {
@@ -536,7 +583,54 @@ const resources = {
       exportInfo2: 'JSON formatı tüm veri türlerini ve ilişkileri korur',
       exportInfo3: 'CSV formatı hesap tablosu uygulamaları için uygundur',
       exportInfo4: 'Tarih aralığı dışa aktarmaları belirtilen dönemdeki işlemleri içerir',
-      export: 'Dışa Aktar'
+      export: 'Dışa Aktar',
+
+      // Notes
+      notes: 'Notlar',
+      createNote: 'Not Oluştur',
+      editNote: 'Not Düzenle',
+      title: 'Başlık',
+      content: 'İçerik',
+      enterTitle: 'Başlık girin',
+      enterContent: 'İçerik girin',
+      archive: 'Arşivle',
+      unarchive: 'Arşivden Çıkar',
+      reminderDate: 'Hatırlatıcı Tarihi',
+      activeNotes: 'aktif not',
+      archivedNotes: 'arşivlenmiş not',
+      showActive: 'Aktif Notları Göster',
+      showArchived: 'Arşivlenmiş Notları Göster',
+      searchNotes: 'Notlarda ara...',
+      noNotes: 'Not bulunamadı',
+      noArchivedNotes: 'Arşivlenmiş not bulunamadı',
+      createFirstNote: 'İlk notunuzu oluşturun',
+      showMore: 'Daha fazla göster',
+      showLess: 'Daha az göster',
+      all: 'Tümü',
+      confirmDeleteNote: 'Bu notu silmek istediğinizden emin misiniz?',
+      errorSavingNote: 'Not kaydedilirken hata oluştu',
+      errorDeletingNote: 'Not silinirken hata oluştu',
+
+      // Note Categories
+      'noteCategory.personal': 'Kişisel',
+      'noteCategory.finance': 'Finans',
+      'noteCategory.business': 'İş',
+      'noteCategory.todo': 'Yapılacaklar',
+      'noteCategory.important': 'Önemli',
+
+      // Priorities
+      'priority.low': 'Düşük',
+      'priority.medium': 'Orta',
+      'priority.high': 'Yüksek',
+
+      // Colors
+      'color.blue': 'Mavi',
+      'color.green': 'Yeşil',
+      'color.yellow': 'Sarı',
+      'color.red': 'Kırmızı',
+      'color.purple': 'Mor',
+      'color.gray': 'Gri',
+      emptyColumn: 'Boş sütun'
     }
   }
 };

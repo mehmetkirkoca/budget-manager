@@ -8,10 +8,13 @@ import AssetProgress from '../components/AssetProgress';
 import DashboardCalendar from '../components/DashboardCalendar';
 import AutoProcessSummary from '../components/AutoProcessSummary';
 import CreditCardSummary from '../components/CreditCardSummary';
+import NotesWidget from '../components/NotesWidget';
 import DraggableWidget from '../components/DraggableWidget';
+import DraggableRow from '../components/DraggableRow';
 import RowLayoutSelector from '../components/RowLayoutSelector';
 import DropZone from '../components/DropZone';
 import WidgetSelector from '../components/WidgetSelector';
+import WidgetColumn from '../components/WidgetColumn';
 import { getSummary } from '../services/dashboardService';
 import { getAllExpenses } from '../services/expenseService';
 import { getAllAssets } from '../services/assetService';
@@ -21,11 +24,30 @@ import { useTranslation } from 'react-i18next';
 
 const Dashboard = () => {
   const { t } = useTranslation();
-  const { rows, moveWidget, swapWidgets, resetLayout, changeRowColumns, addRow, removeRow, getRowClasses, addWidgetToRow, removeWidgetFromRow, getAvailableWidgets } = useWidgetLayout();
+  const { rows, moveWidget, swapWidgets, moveWidgetWithinColumn, moveRow, resetLayout, changeRowColumns, addRow, removeRow, getRowClasses, addWidgetToRow, removeWidgetFromRow, getAvailableWidgets } = useWidgetLayout();
   const [showWidgetSelector, setShowWidgetSelector] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedRowForWidget, setSelectedRowForWidget] = useState(null);
   const [selectedColumnForWidget, setSelectedColumnForWidget] = useState(null);
+
+  // Helper function to find widget position
+  const findWidgetPosition = (widgetId) => {
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      const row = rows[rowIndex];
+      if (row.widgets) {
+        for (let columnIndex = 0; columnIndex < row.widgets.length; columnIndex++) {
+          const column = row.widgets[columnIndex];
+          if (Array.isArray(column)) {
+            const widgetIndex = column.findIndex(w => w && w.id === widgetId);
+            if (widgetIndex !== -1) {
+              return { rowIndex, columnIndex, widgetIndex };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  };
   const [summaryData, setSummaryData] = useState({
     monthlyIncome: 0,
     monthlyExpenses: 0,
@@ -111,6 +133,8 @@ const Dashboard = () => {
             <CreditCardSummary />
           </div>
         );
+      case 'notes':
+        return <NotesWidget />;
       default:
         return null;
     }
@@ -154,93 +178,80 @@ const Dashboard = () => {
         </div>
 
         {/* Row-based Widgets */}
-        <div className="space-y-6">
-          {rows && rows.map((row, rowIndex) => (
-            <div key={row.id}>
-              {editMode && (
-                <RowLayoutSelector
-                  rowIndex={rowIndex}
-                  columnCount={row.columns}
-                  onColumnChange={changeRowColumns}
-                  onAddRow={addRow}
-                  onRemoveRow={removeRow}
-                  canRemove={rows.length > 1}
-                />
-              )}
-              
-              <div className={getRowClasses(row.columns)}>
-                {Array.from({ length: row.columns }, (_, columnIndex) => {
-                  const widget = row.widgets && row.widgets[columnIndex];
+        <div className={`space-y-6 ${editMode ? 'pl-8' : ''}`}>
+          {rows && rows.map((row, rowIndex) =>
+            editMode ? (
+              <DraggableRow
+                key={row.id}
+                rowIndex={rowIndex}
+                onMoveRow={moveRow}
+              >
+                <div>
+                  <RowLayoutSelector
+                    rowIndex={rowIndex}
+                    columnCount={row.columns}
+                    onColumnChange={changeRowColumns}
+                    onAddRow={addRow}
+                    onRemoveRow={removeRow}
+                    canRemove={rows.length > 1}
+                  />
 
-                  if (widget) {
-                    // Widget exists for this column
-                    return editMode ? (
-                      <div key={widget.id} className="relative group">
-                        <DraggableWidget
-                          id={widget.id}
-                          index={columnIndex}
+                  <div className={getRowClasses(row.columns)}>
+                    {Array.from({ length: row.columns }, (_, columnIndex) => {
+                      const widgets = (row.widgets && Array.isArray(row.widgets[columnIndex]))
+                      ? row.widgets[columnIndex]
+                      : [];
+
+                      return (
+                        <WidgetColumn
+                          key={`col-${rowIndex}-${columnIndex}`}
+                          widgets={widgets}
                           rowIndex={rowIndex}
-                          swapWidgets={swapWidgets}
-                          className="transition-all duration-200 hover:scale-[1.02]"
-                        >
-                          {renderWidget(widget)}
-                        </DraggableWidget>
-                        <button
-                          onClick={() => removeWidgetFromRow(rowIndex, columnIndex)}
-                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                          title={t('delete')}
-                        >
-                          <FiX size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div key={widget.id}>
-                        {renderWidget(widget)}
-                      </div>
-                    );
-                  } else {
-                    // Empty slot - show DropZone and Add Widget button only in edit mode
-                    return editMode ? (
-                      <div key={`empty-${rowIndex}-${columnIndex}`} className="relative">
-                        <DropZone
-                          onDrop={(item) => {
-                            if (item.widgetId) {
-                              // Moving existing widget
-                              const fromRowIndex = rows.findIndex(r =>
-                                r.widgets && r.widgets.some(w => w && w.id === item.widgetId)
-                              );
-                              if (fromRowIndex !== -1) {
-                                // Find the widget index in the filtered array (only non-null widgets)
-                                const sourceRow = rows[fromRowIndex];
-                                const filteredWidgets = (sourceRow.widgets || []).filter(w => w);
-                                const fromWidgetIndex = filteredWidgets.findIndex(w => w.id === item.widgetId);
-
-                                moveWidget(fromRowIndex, fromWidgetIndex, rowIndex, columnIndex);
-                              }
-                            }
+                          columnIndex={columnIndex}
+                          editMode={editMode}
+                          onAddWidget={(rowIdx, colIdx) => {
+                            setSelectedRowForWidget(rowIdx);
+                            setSelectedColumnForWidget(colIdx);
+                            setShowWidgetSelector(true);
                           }}
-                          className="min-h-[100px] cursor-pointer"
+                          onRemoveWidget={removeWidgetFromRow}
+                          onMoveWidget={(fromRowIdx, fromColIdx, fromWidgetIdx, toRowIdx, toColIdx) => {
+                            moveWidget(fromRowIdx, fromColIdx, fromWidgetIdx, toRowIdx, toColIdx);
+                          }}
+                          onMoveWithinColumn={moveWidgetWithinColumn}
+                          renderWidget={renderWidget}
+                          t={t}
                         />
-                        <div className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-400 dark:hover:border-blue-500 transition-colors bg-white/50 dark:bg-gray-800/50">
-                          <button
-                            onClick={() => {
-                              setSelectedRowForWidget(rowIndex);
-                              setSelectedColumnForWidget(columnIndex);
-                              setShowWidgetSelector(true);
-                            }}
-                            className="flex items-center justify-center"
-                          >
-                            <FiPlus className="mr-2" size={16} />
-                            {t('addWidget')}
-                          </button>
-                        </div>
-                      </div>
-                    ) : null;
-                  }
-                })}
+                      );
+                    })}
+                  </div>
+                </div>
+              </DraggableRow>
+            ) : (
+              <div key={row.id}>
+                <div className={getRowClasses(row.columns)}>
+                  {Array.from({ length: row.columns }, (_, columnIndex) => {
+                    const widgets = (row.widgets && Array.isArray(row.widgets[columnIndex]))
+                      ? row.widgets[columnIndex]
+                      : [];
+
+                    return (
+                      <WidgetColumn
+                        key={`col-${rowIndex}-${columnIndex}`}
+                        widgets={widgets}
+                        rowIndex={rowIndex}
+                        columnIndex={columnIndex}
+                        editMode={false}
+                        onMoveWithinColumn={moveWidgetWithinColumn}
+                        renderWidget={renderWidget}
+                        t={t}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
         
         {/* Widget Selector Modal */}

@@ -5,7 +5,7 @@ const ItemType = {
   WIDGET: 'widget'
 };
 
-const DraggableWidget = ({ id, index, rowIndex, children, swapWidgets, className = '' }) => {
+const DraggableWidget = ({ id, index, rowIndex, columnIndex, children, swapWidgets, className = '' }) => {
   const ref = useRef(null);
 
   const [{ isOver, canDrop }, drop] = useDrop({
@@ -25,7 +25,7 @@ const DraggableWidget = ({ id, index, rowIndex, children, swapWidgets, className
   const [{ isDragging }, drag] = useDrag({
     type: ItemType.WIDGET,
     item: () => {
-      return { id, index, rowIndex, widgetId: id };
+      return { id, index, rowIndex, columnIndex, widgetId: id };
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),

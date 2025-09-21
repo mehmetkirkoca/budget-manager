@@ -11,6 +11,7 @@ import CreditCardForm from './components/CreditCardForm';
 import CreditCardInstallments from './pages/CreditCardInstallments';
 import Export from './pages/Export';
 import ImportData from './pages/ImportData';
+import Notes from './pages/Notes';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Route path="credit-cards" element={<CreditCards />} />
           <Route path="credit-cards/new" element={<CreditCardForm />} />
           <Route path="credit-cards/installments" element={<CreditCardInstallments />} />
+          <Route path="notes" element={<Notes />} />
           <Route path="export" element={<Export />} />
           <Route path="import" element={<ImportData />} />
         </Route>

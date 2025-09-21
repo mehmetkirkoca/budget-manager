@@ -8,35 +8,36 @@ const ALL_AVAILABLE_WIDGETS = [
   { id: 'asset-progress', type: 'asset-progress', name: 'Asset Progress' },
   { id: 'calendar', type: 'calendar', name: 'Calendar' },
   { id: 'auto-process', type: 'auto-process', name: 'Auto Process' },
-  { id: 'credit-cards', type: 'credit-cards', name: 'Credit Cards' }
+  { id: 'credit-cards', type: 'credit-cards', name: 'Credit Cards' },
+  { id: 'notes', type: 'notes', name: 'Notes' }
 ];
 
 const DEFAULT_ROWS = [
   {
     id: 'row-0',
     columns: 1,
-    widgets: [{ id: 'summary-cards', type: 'summary-cards' }]
+    widgets: [[{ id: 'summary-cards', type: 'summary-cards' }]]
   },
   {
-    id: 'row-1', 
+    id: 'row-1',
     columns: 2,
     widgets: [
-      { id: 'expense-chart', type: 'expense-chart' },
-      { id: 'asset-progress', type: 'asset-progress' }
+      [{ id: 'expense-chart', type: 'expense-chart' }],
+      [{ id: 'asset-progress', type: 'asset-progress' }]
     ]
   },
   {
     id: 'row-2',
-    columns: 2, 
+    columns: 2,
     widgets: [
-      { id: 'calendar', type: 'calendar' },
-      { id: 'auto-process', type: 'auto-process' }
+      [{ id: 'calendar', type: 'calendar' }],
+      [{ id: 'auto-process', type: 'auto-process' }]
     ]
   },
   {
     id: 'row-3',
     columns: 1,
-    widgets: [{ id: 'credit-cards', type: 'credit-cards' }]
+    widgets: [[{ id: 'credit-cards', type: 'credit-cards' }]]
   }
 ];
 
@@ -99,42 +100,46 @@ export const useWidgetLayout = () => {
   }, [rows, saveLayout]);
 
   // Move widget between rows/positions
-  const moveWidget = useCallback((fromRowIndex, fromWidgetIndex, toRowIndex, toWidgetIndex) => {
+  const moveWidget = useCallback((fromRowIndex, fromColumnIndex, fromWidgetIndex, toRowIndex, toColumnIndex, toWidgetIndex = -1) => {
     const updatedRows = [...rows];
     const fromRow = updatedRows[fromRowIndex];
     const toRow = updatedRows[toRowIndex];
 
-    // Find the actual widget by filtering out nulls
-    const sourceWidgets = (fromRow.widgets || []).filter(w => w);
-    if (!sourceWidgets[fromWidgetIndex]) {
-      return;
-    }
+    // Ensure widgets arrays exist
+    if (!fromRow.widgets || !fromRow.widgets[fromColumnIndex]) return;
 
-    const movedWidget = sourceWidgets[fromWidgetIndex];
+    const sourceColumn = fromRow.widgets[fromColumnIndex];
+    if (!sourceColumn || !sourceColumn[fromWidgetIndex]) return;
 
-    // Remove widget from source row (clear its position)
-    if (fromRow.widgets) {
-      // Find and clear the position in the original array
-      for (let i = 0; i < fromRow.widgets.length; i++) {
-        if (fromRow.widgets[i] && fromRow.widgets[i].id === movedWidget.id) {
-          fromRow.widgets[i] = null;
-          break;
+    const movedWidget = sourceColumn[fromWidgetIndex];
+
+    // Remove widget from source column
+    sourceColumn.splice(fromWidgetIndex, 1);
+
+    // Ensure target row has widgets array with proper size
+    if (!toRow.widgets) {
+      toRow.widgets = new Array(toRow.columns).fill(null).map(() => []);
+    } else {
+      // Extend array if needed
+      while (toRow.widgets.length < toRow.columns) {
+        toRow.widgets.push([]);
+      }
+      // Ensure each column is an array
+      for (let i = 0; i < toRow.widgets.length; i++) {
+        if (!Array.isArray(toRow.widgets[i])) {
+          toRow.widgets[i] = [];
         }
       }
     }
 
-    // Ensure target row has widgets array with proper size
-    if (!toRow.widgets) {
-      toRow.widgets = new Array(toRow.columns).fill(null);
+    // Add widget to target column
+    if (toWidgetIndex === -1) {
+      // Add to end of column
+      toRow.widgets[toColumnIndex].push(movedWidget);
     } else {
-      // Extend array if needed
-      while (toRow.widgets.length < toRow.columns) {
-        toRow.widgets.push(null);
-      }
+      // Insert at specific position
+      toRow.widgets[toColumnIndex].splice(toWidgetIndex, 0, movedWidget);
     }
-
-    // Place widget at specific position
-    toRow.widgets[toWidgetIndex] = movedWidget;
 
     saveLayout(updatedRows);
   }, [rows, saveLayout]);
@@ -149,53 +154,50 @@ export const useWidgetLayout = () => {
 
     // Ensure widgets array exists with proper size
     if (!row.widgets) {
-      row.widgets = new Array(row.columns).fill(null);
+      row.widgets = new Array(row.columns).fill(null).map(() => []);
     } else {
       // Extend array if needed
       while (row.widgets.length < row.columns) {
-        row.widgets.push(null);
+        row.widgets.push([]);
+      }
+      // Ensure each column is an array
+      for (let i = 0; i < row.widgets.length; i++) {
+        if (!Array.isArray(row.widgets[i])) {
+          row.widgets[i] = [];
+        }
       }
     }
 
-    // If columnIndex is specified, place at that position
-    // Otherwise find the first empty position
-    let targetIndex = columnIndex;
-    if (targetIndex === null) {
-      targetIndex = row.widgets.findIndex(w => w === null);
-      if (targetIndex === -1) {
-        // No empty slots, add to end
-        targetIndex = row.widgets.length;
-        row.widgets.push(null);
+    // If columnIndex is specified, add to that column
+    // Otherwise find the first column with space
+    let targetColumnIndex = columnIndex;
+    if (targetColumnIndex === null) {
+      // Find first column (prefer empty ones, but any will do)
+      targetColumnIndex = 0;
+      for (let i = 0; i < row.widgets.length; i++) {
+        if (row.widgets[i].length === 0) {
+          targetColumnIndex = i;
+          break;
+        }
       }
     }
 
-    row.widgets[targetIndex] = {
+    // Add widget to the end of the target column
+    row.widgets[targetColumnIndex].push({
       id: widget.id,
       type: widget.type
-    };
+    });
 
     saveLayout(updatedRows);
   }, [rows, saveLayout]);
 
   // Remove widget from row
-  const removeWidgetFromRow = useCallback((rowIndex, widgetIndex) => {
+  const removeWidgetFromRow = useCallback((rowIndex, columnIndex, widgetIndex) => {
     const updatedRows = [...rows];
     const row = updatedRows[rowIndex];
 
-    if (row.widgets) {
-      // Find the actual widget by filtering out nulls and getting by index
-      const actualWidgets = row.widgets.filter(w => w);
-      const widgetToRemove = actualWidgets[widgetIndex];
-
-      if (widgetToRemove) {
-        // Find and clear the position in the array
-        for (let i = 0; i < row.widgets.length; i++) {
-          if (row.widgets[i] && row.widgets[i].id === widgetToRemove.id) {
-            row.widgets[i] = null;
-            break;
-          }
-        }
-      }
+    if (row.widgets && row.widgets[columnIndex] && row.widgets[columnIndex][widgetIndex]) {
+      row.widgets[columnIndex].splice(widgetIndex, 1);
     }
 
     saveLayout(updatedRows);
@@ -218,7 +220,9 @@ export const useWidgetLayout = () => {
   // Get available widgets (not used in any row)
   const getAvailableWidgets = useCallback(() => {
     const usedWidgetIds = rows.flatMap(row =>
-      (row.widgets || []).filter(widget => widget).map(widget => widget.id)
+      (row.widgets || []).flatMap(column =>
+        Array.isArray(column) ? column.map(widget => widget.id) : []
+      )
     );
 
     return ALL_AVAILABLE_WIDGETS.filter(widget =>
@@ -226,6 +230,34 @@ export const useWidgetLayout = () => {
     );
   }, [rows]);
 
+
+  // Move widget within the same column (reorder vertically)
+  const moveWidgetWithinColumn = useCallback((rowIndex, columnIndex, fromWidgetIndex, toWidgetIndex) => {
+    if (fromWidgetIndex === toWidgetIndex) return;
+
+    const updatedRows = [...rows];
+    const row = updatedRows[rowIndex];
+
+    if (!row.widgets || !row.widgets[columnIndex]) return;
+
+    const column = [...row.widgets[columnIndex]];
+    const [movedWidget] = column.splice(fromWidgetIndex, 1);
+    column.splice(toWidgetIndex, 0, movedWidget);
+
+    row.widgets[columnIndex] = column;
+    saveLayout(updatedRows);
+  }, [rows, saveLayout]);
+
+  // Move row to different position
+  const moveRow = useCallback((fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return;
+
+    const updatedRows = [...rows];
+    const [movedRow] = updatedRows.splice(fromIndex, 1);
+    updatedRows.splice(toIndex, 0, movedRow);
+
+    saveLayout(updatedRows);
+  }, [rows, saveLayout]);
 
   // Reset to default layout
   const resetLayout = useCallback(() => {
@@ -258,6 +290,8 @@ export const useWidgetLayout = () => {
     rows,
     moveWidget,
     swapWidgets,
+    moveWidgetWithinColumn,
+    moveRow,
     resetLayout,
     changeRowColumns,
     addRow,

@@ -69,8 +69,8 @@ const Dashboard = () => {
   const cards = [
     { title: t('monthlyIncome'), value: summaryData.monthlyIncome, icon: <FiTrendingUp />, color: 'text-green-500' },
     { title: t('monthlyExpenses'), value: summaryData.monthlyExpenses, icon: <FiTrendingDown />, color: 'text-red-500' },
-    { title: t('totalBalance'), value: summaryData.totalBalance, icon: <FiDollarSign />, color: 'text-blue-500' },
     { title: t('totalAssets'), value: summaryData.totalAssets, icon: <FiActivity />, color: 'text-indigo-500' },
+    { title: t('totalBalance'), value: summaryData.totalBalance, icon: <FiDollarSign />, color: 'text-blue-500' },
   ];
 
   const renderWidget = (widget) => {

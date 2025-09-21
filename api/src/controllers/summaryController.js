@@ -1,6 +1,7 @@
 const Expense = require('../models/Expense');
 const Asset = require('../models/Asset');
 const Income = require('../models/Income');
+const CreditCard = require('../models/CreditCard');
 const assetConversionService = require('../services/assetConversionService');
 
 const getSummary = async (request, reply) => {
@@ -38,6 +39,10 @@ const getSummary = async (request, reply) => {
 
     const totalCurrentAssets = assetConversions.totalCurrentTRY;
     const totalTargetAssets = assetConversions.totalTargetTRY;
+
+    // Get total credit card debts
+    const creditCards = await CreditCard.find({ isActive: true });
+    const totalCreditCardDebt = creditCards.reduce((sum, card) => sum + (card.currentBalance || 0), 0);
 
     // Calculate monthly income from Income model
     // Get one-time incomes for current month
@@ -83,13 +88,15 @@ const getSummary = async (request, reply) => {
     const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100 : 0;
 
     const summary = {
-      totalBalance: totalCurrentAssets - totalExpenses,
+      totalBalance: totalCurrentAssets - totalCreditCardDebt,
       monthlyIncome,
       monthlyExpenses,
       savingsRate: Math.max(0, savingsRate),
       totalExpenses,
       totalAssets: totalCurrentAssets,
       totalTargetAssets,
+      totalCreditCardDebt,
+      netWorth: totalCurrentAssets - totalCreditCardDebt - totalExpenses,
       remainingToTarget: Math.max(0, totalTargetAssets - totalCurrentAssets),
     };
 

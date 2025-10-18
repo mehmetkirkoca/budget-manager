@@ -15,6 +15,7 @@ const creditCardInstallmentRoutes = require('./routes/creditCardInstallment');
 const exportRoutes = require('./routes/export');
 const importRoutes = require('./routes/import');
 const noteRoutes = require('./routes/notes');
+const healthRoutes = require('./routes/health');
 
 // Connect to MongoDB
 connectDB();
@@ -40,10 +41,15 @@ fastify.register(creditCardInstallmentRoutes, { prefix: '/api' });
 fastify.register(exportRoutes, { prefix: '/api' });
 fastify.register(importRoutes, { prefix: '/api/import' });
 fastify.register(noteRoutes, { prefix: '/api/notes' });
+// Health route registered separately without /api prefix since it's already in the route definition
 
-// Health check route
+// Health check routes
 fastify.get('/', async (request, reply) => {
   return { message: 'Budget Manager API is running!' };
+});
+
+fastify.get('/api/health', async (request, reply) => {
+  return { message: 'Budget Manager API is healthy!', status: 'ok' };
 });
 
 // Function to start the server

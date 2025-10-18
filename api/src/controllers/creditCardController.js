@@ -86,33 +86,34 @@ const updateCreditCard = async (request, reply) => {
   try {
     const { id } = request.params;
     const updateData = request.body;
-    
+
     // No manual validation - let model handle it
-    
+
     const creditCard = await CreditCard.findByIdAndUpdate(
-      id, 
-      updateData, 
+      id,
+      updateData,
       { new: true, runValidators: true }
     );
-    
+
     if (!creditCard) {
-      return reply.status(404).send({ 
-        error: 'Not Found', 
-        message: 'Credit card not found' 
+      return reply.status(404).send({
+        error: 'Not Found',
+        message: 'Credit card not found'
       });
     }
-    
-    // Update available limit based on current balance
-    if (updateData.currentBalance !== undefined || updateData.totalLimit !== undefined) {
+
+    // Only auto-calculate available limit if currentBalance is updated but availableLimit is not provided
+    // This allows users to manually update availableLimit if needed
+    if (updateData.currentBalance !== undefined && updateData.availableLimit === undefined) {
       await creditCard.updateAvailableLimit();
     }
-    
+
     reply.send(creditCard);
   } catch (error) {
     request.log.error(error);
-    reply.status(500).send({ 
-      error: 'Internal Server Error', 
-      message: 'Failed to update credit card' 
+    reply.status(500).send({
+      error: 'Internal Server Error',
+      message: 'Failed to update credit card'
     });
   }
 };

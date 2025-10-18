@@ -34,53 +34,48 @@ const importAllData = async (request, reply) => {
       summary: {}
     };
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
       // Import categories
       if (shouldImportCollection('categories', importOptions.collections) && data.data.categories) {
-        const categoryResult = await importCategories(data.data.categories, importOptions, session);
+        const categoryResult = await importCategories(data.data.categories, importOptions);
         results.imported.categories = categoryResult;
       }
 
       // Import expenses
       if (shouldImportCollection('expenses', importOptions.collections) && data.data.expenses) {
-        const expenseResult = await importExpenses(data.data.expenses, importOptions, session);
+        const expenseResult = await importExpenses(data.data.expenses, importOptions);
         results.imported.expenses = expenseResult;
       }
 
       // Import incomes
       if (shouldImportCollection('incomes', importOptions.collections) && data.data.incomes) {
-        const incomeResult = await importIncomes(data.data.incomes, importOptions, session);
+        const incomeResult = await importIncomes(data.data.incomes, importOptions);
         results.imported.incomes = incomeResult;
       }
 
       // Import assets
       if (shouldImportCollection('assets', importOptions.collections) && data.data.assets) {
-        const assetResult = await importAssets(data.data.assets, importOptions, session);
+        const assetResult = await importAssets(data.data.assets, importOptions);
         results.imported.assets = assetResult;
       }
 
       // Import recurring payments
       if (shouldImportCollection('recurringPayments', importOptions.collections) && data.data.recurringPayments) {
-        const recurringResult = await importRecurringPayments(data.data.recurringPayments, importOptions, session);
+        const recurringResult = await importRecurringPayments(data.data.recurringPayments, importOptions);
         results.imported.recurringPayments = recurringResult;
       }
 
       // Import credit cards
       if (shouldImportCollection('creditCards', importOptions.collections) && data.data.creditCards) {
-        const creditCardResult = await importCreditCards(data.data.creditCards, importOptions, session);
+        const creditCardResult = await importCreditCards(data.data.creditCards, importOptions);
         results.imported.creditCards = creditCardResult;
       }
 
       // Import installments
       if (shouldImportCollection('creditCardInstallments', importOptions.collections) && data.data.creditCardInstallments) {
-        const installmentResult = await importInstallments(data.data.creditCardInstallments, importOptions, session);
+        const installmentResult = await importInstallments(data.data.creditCardInstallments, importOptions);
         results.imported.creditCardInstallments = installmentResult;
       }
-
-      await session.commitTransaction();
 
       // Calculate summary
       results.summary = {
@@ -91,10 +86,7 @@ const importAllData = async (request, reply) => {
 
       reply.send(results);
     } catch (error) {
-      await session.abortTransaction();
       throw error;
-    } finally {
-      session.endSession();
     }
   } catch (error) {
     request.log.error(error);
@@ -126,31 +118,29 @@ const importCollection = async (request, reply) => {
     };
 
     let result;
-    const session = await mongoose.startSession();
-    session.startTransaction();
 
     try {
       switch (collection) {
         case 'categories':
-          result = await importCategories(data, importOptions, session);
+          result = await importCategories(data, importOptions);
           break;
         case 'expenses':
-          result = await importExpenses(data, importOptions, session);
+          result = await importExpenses(data, importOptions);
           break;
         case 'incomes':
-          result = await importIncomes(data, importOptions, session);
+          result = await importIncomes(data, importOptions);
           break;
         case 'assets':
-          result = await importAssets(data, importOptions, session);
+          result = await importAssets(data, importOptions);
           break;
         case 'recurringPayments':
-          result = await importRecurringPayments(data, importOptions, session);
+          result = await importRecurringPayments(data, importOptions);
           break;
         case 'creditCards':
-          result = await importCreditCards(data, importOptions, session);
+          result = await importCreditCards(data, importOptions);
           break;
         case 'creditCardInstallments':
-          result = await importInstallments(data, importOptions, session);
+          result = await importInstallments(data, importOptions);
           break;
         default:
           return reply.status(400).send({
@@ -159,7 +149,6 @@ const importCollection = async (request, reply) => {
           });
       }
 
-      await session.commitTransaction();
       reply.send({
         success: true,
         collection,
@@ -167,10 +156,7 @@ const importCollection = async (request, reply) => {
         importDate: new Date().toISOString()
       });
     } catch (error) {
-      await session.abortTransaction();
       throw error;
-    } finally {
-      session.endSession();
     }
   } catch (error) {
     request.log.error(error);
@@ -280,10 +266,15 @@ const shouldImportCollection = (collection, collections) => {
   return collections.includes('all') || collections.includes(collection);
 };
 
-const importCategories = async (categories, options, session) => {
+const importCategories = async (categories, options) => {
   let imported = 0;
   let updated = 0;
   let skipped = 0;
+
+  // Delete all existing records if in replace mode
+  if (options.mode === 'replace') {
+    await Category.deleteMany({});
+  }
 
   for (const categoryData of categories) {
     try {
@@ -292,12 +283,8 @@ const importCategories = async (categories, options, session) => {
       delete cleanData._id;
       delete cleanData.__v;
 
-      if (options.mode === 'replace') {
-        await Category.deleteMany({}, { session });
-      }
-
       // Check for existing category
-      const existing = await Category.findOne({ name: cleanData.name }, null, { session });
+      const existing = await Category.findOne({ name: cleanData.name });
 
       if (existing) {
         if (options.skipDuplicates && options.mode !== 'replace') {
@@ -306,11 +293,11 @@ const importCategories = async (categories, options, session) => {
         }
 
         // Update existing
-        await Category.findByIdAndUpdate(existing._id, cleanData, { session });
+        await Category.findByIdAndUpdate(existing._id, cleanData);
         updated++;
       } else {
         // Create new
-        await Category.create([cleanData], { session });
+        await Category.create([cleanData]);
         imported++;
       }
     } catch (error) {
@@ -321,10 +308,15 @@ const importCategories = async (categories, options, session) => {
   return { imported, updated, skipped };
 };
 
-const importExpenses = async (expenses, options, session) => {
+const importExpenses = async (expenses, options) => {
   let imported = 0;
   let updated = 0;
   let skipped = 0;
+
+  // Delete all existing records if in replace mode
+  if (options.mode === 'replace') {
+    await Expense.deleteMany({});
+  }
 
   for (const expenseData of expenses) {
     try {
@@ -332,16 +324,12 @@ const importExpenses = async (expenses, options, session) => {
       delete cleanData._id;
       delete cleanData.__v;
 
-      if (options.mode === 'replace') {
-        await Expense.deleteMany({}, { session });
-      }
-
       // Check for existing expense (by amount, date, and description)
       const existing = await Expense.findOne({
         amount: cleanData.amount,
         date: cleanData.date,
         description: cleanData.description
-      }, null, { session });
+      });
 
       if (existing) {
         if (options.skipDuplicates && options.mode !== 'replace') {
@@ -349,10 +337,10 @@ const importExpenses = async (expenses, options, session) => {
           continue;
         }
 
-        await Expense.findByIdAndUpdate(existing._id, cleanData, { session });
+        await Expense.findByIdAndUpdate(existing._id, cleanData);
         updated++;
       } else {
-        await Expense.create([cleanData], { session });
+        await Expense.create([cleanData]);
         imported++;
       }
     } catch (error) {
@@ -363,10 +351,15 @@ const importExpenses = async (expenses, options, session) => {
   return { imported, updated, skipped };
 };
 
-const importIncomes = async (incomes, options, session) => {
+const importIncomes = async (incomes, options) => {
   let imported = 0;
   let updated = 0;
   let skipped = 0;
+
+  // Delete all existing records if in replace mode
+  if (options.mode === 'replace') {
+    await Income.deleteMany({});
+  }
 
   for (const incomeData of incomes) {
     try {
@@ -374,15 +367,11 @@ const importIncomes = async (incomes, options, session) => {
       delete cleanData._id;
       delete cleanData.__v;
 
-      if (options.mode === 'replace') {
-        await Income.deleteMany({}, { session });
-      }
-
       const existing = await Income.findOne({
         source: cleanData.source,
         amount: cleanData.amount,
         date: cleanData.date
-      }, null, { session });
+      });
 
       if (existing) {
         if (options.skipDuplicates && options.mode !== 'replace') {
@@ -390,10 +379,10 @@ const importIncomes = async (incomes, options, session) => {
           continue;
         }
 
-        await Income.findByIdAndUpdate(existing._id, cleanData, { session });
+        await Income.findByIdAndUpdate(existing._id, cleanData);
         updated++;
       } else {
-        await Income.create([cleanData], { session });
+        await Income.create([cleanData]);
         imported++;
       }
     } catch (error) {
@@ -404,10 +393,15 @@ const importIncomes = async (incomes, options, session) => {
   return { imported, updated, skipped };
 };
 
-const importAssets = async (assets, options, session) => {
+const importAssets = async (assets, options) => {
   let imported = 0;
   let updated = 0;
   let skipped = 0;
+
+  // Delete all existing records if in replace mode
+  if (options.mode === 'replace') {
+    await Asset.deleteMany({});
+  }
 
   for (const assetData of assets) {
     try {
@@ -415,11 +409,7 @@ const importAssets = async (assets, options, session) => {
       delete cleanData._id;
       delete cleanData.__v;
 
-      if (options.mode === 'replace') {
-        await Asset.deleteMany({}, { session });
-      }
-
-      const existing = await Asset.findOne({ name: cleanData.name }, null, { session });
+      const existing = await Asset.findOne({ name: cleanData.name });
 
       if (existing) {
         if (options.skipDuplicates && options.mode !== 'replace') {
@@ -427,10 +417,10 @@ const importAssets = async (assets, options, session) => {
           continue;
         }
 
-        await Asset.findByIdAndUpdate(existing._id, cleanData, { session });
+        await Asset.findByIdAndUpdate(existing._id, cleanData);
         updated++;
       } else {
-        await Asset.create([cleanData], { session });
+        await Asset.create([cleanData]);
         imported++;
       }
     } catch (error) {
@@ -441,10 +431,15 @@ const importAssets = async (assets, options, session) => {
   return { imported, updated, skipped };
 };
 
-const importRecurringPayments = async (recurringPayments, options, session) => {
+const importRecurringPayments = async (recurringPayments, options) => {
   let imported = 0;
   let updated = 0;
   let skipped = 0;
+
+  // Delete all existing records if in replace mode
+  if (options.mode === 'replace') {
+    await RecurringPayment.deleteMany({});
+  }
 
   for (const paymentData of recurringPayments) {
     try {
@@ -457,11 +452,7 @@ const importRecurringPayments = async (recurringPayments, options, session) => {
         cleanData.category = cleanData.category._id;
       }
 
-      if (options.mode === 'replace') {
-        await RecurringPayment.deleteMany({}, { session });
-      }
-
-      const existing = await RecurringPayment.findOne({ name: cleanData.name }, null, { session });
+      const existing = await RecurringPayment.findOne({ name: cleanData.name });
 
       if (existing) {
         if (options.skipDuplicates && options.mode !== 'replace') {
@@ -469,10 +460,10 @@ const importRecurringPayments = async (recurringPayments, options, session) => {
           continue;
         }
 
-        await RecurringPayment.findByIdAndUpdate(existing._id, cleanData, { session });
+        await RecurringPayment.findByIdAndUpdate(existing._id, cleanData);
         updated++;
       } else {
-        await RecurringPayment.create([cleanData], { session });
+        await RecurringPayment.create([cleanData]);
         imported++;
       }
     } catch (error) {
@@ -483,10 +474,15 @@ const importRecurringPayments = async (recurringPayments, options, session) => {
   return { imported, updated, skipped };
 };
 
-const importCreditCards = async (creditCards, options, session) => {
+const importCreditCards = async (creditCards, options) => {
   let imported = 0;
   let updated = 0;
   let skipped = 0;
+
+  // Delete all existing records if in replace mode
+  if (options.mode === 'replace') {
+    await CreditCard.deleteMany({});
+  }
 
   for (const cardData of creditCards) {
     try {
@@ -494,11 +490,7 @@ const importCreditCards = async (creditCards, options, session) => {
       delete cleanData._id;
       delete cleanData.__v;
 
-      if (options.mode === 'replace') {
-        await CreditCard.deleteMany({}, { session });
-      }
-
-      const existing = await CreditCard.findOne({ name: cleanData.name }, null, { session });
+      const existing = await CreditCard.findOne({ name: cleanData.name });
 
       if (existing) {
         if (options.skipDuplicates && options.mode !== 'replace') {
@@ -506,10 +498,10 @@ const importCreditCards = async (creditCards, options, session) => {
           continue;
         }
 
-        await CreditCard.findByIdAndUpdate(existing._id, cleanData, { session });
+        await CreditCard.findByIdAndUpdate(existing._id, cleanData);
         updated++;
       } else {
-        await CreditCard.create([cleanData], { session });
+        await CreditCard.create([cleanData]);
         imported++;
       }
     } catch (error) {
@@ -520,10 +512,15 @@ const importCreditCards = async (creditCards, options, session) => {
   return { imported, updated, skipped };
 };
 
-const importInstallments = async (installments, options, session) => {
+const importInstallments = async (installments, options) => {
   let imported = 0;
   let updated = 0;
   let skipped = 0;
+
+  // Delete all existing records if in replace mode
+  if (options.mode === 'replace') {
+    await CreditCardInstallment.deleteMany({});
+  }
 
   for (const installmentData of installments) {
     try {
@@ -539,16 +536,12 @@ const importInstallments = async (installments, options, session) => {
         cleanData.category = cleanData.category._id;
       }
 
-      if (options.mode === 'replace') {
-        await CreditCardInstallment.deleteMany({}, { session });
-      }
-
       // For installments, we'll always create new ones unless exact match
       const existing = await CreditCardInstallment.findOne({
         totalAmount: cleanData.totalAmount,
         description: cleanData.description,
         startDate: cleanData.startDate
-      }, null, { session });
+      });
 
       if (existing) {
         if (options.skipDuplicates && options.mode !== 'replace') {
@@ -556,10 +549,10 @@ const importInstallments = async (installments, options, session) => {
           continue;
         }
 
-        await CreditCardInstallment.findByIdAndUpdate(existing._id, cleanData, { session });
+        await CreditCardInstallment.findByIdAndUpdate(existing._id, cleanData);
         updated++;
       } else {
-        await CreditCardInstallment.create([cleanData], { session });
+        await CreditCardInstallment.create([cleanData]);
         imported++;
       }
     } catch (error) {

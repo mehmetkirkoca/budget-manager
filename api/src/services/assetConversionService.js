@@ -30,66 +30,45 @@ class AssetConversionService {
 
     return this.getPrice(key, async () => {
       try {
-        // Try multiple Turkish gold price APIs
-        const apis = [
-          'https://finans.truncgil.com/v4/today.json',
-          'https://api.genelpara.com/today.json',
-          'https://api.doviz.com/v1/golds'
-        ];
-
-        for (const apiUrl of apis) {
-          try {
-            const response = await axios.get(apiUrl, {
-              timeout: 5000,
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-              }
-            });
-
-            let price24k = 0;
-
-            if (apiUrl.includes('truncgil')) {
-              const goldData = response.data;
-              if (goldData.GRA && goldData.GRA.Selling) {
-                price24k = parseFloat(goldData.GRA.Selling) || 0;
-              } else if (goldData.gram_altin) {
-                price24k = parseFloat(goldData.gram_altin.satis) || 0;
-              }
-            } else if (apiUrl.includes('genelpara')) {
-              const goldData = response.data;
-              if (goldData.GAC) {
-                price24k = parseFloat(goldData.GAC.satis) || 0;
-              }
-            } else if (apiUrl.includes('doviz')) {
-              const goldData = response.data;
-              if (goldData && Array.isArray(goldData)) {
-                const gramGold = goldData.find(item => item.name === 'Gram Altın');
-                if (gramGold) {
-                  price24k = parseFloat(gramGold.selling) || 0;
-                }
-              }
-            }
-
-            if (price24k > 0) {
-              // Calculate price for different karats
-              const karatPrice = (karat / 24) * price24k;
-              return Math.round(karatPrice * 100) / 100;
-            }
-          } catch (apiError) {
-            console.warn(`API ${apiUrl} failed:`, apiError.message);
-            continue;
+        const response = await axios.get('https://finans.truncgil.com/today.json', {
+          timeout: 5000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
           }
+        });
+
+        const goldData = response.data;
+        let price24k = 0;
+
+        // Try to get gram gold price (24k)
+        if (goldData['gram-altin'] && goldData['gram-altin'].Satış) {
+          // Turkish number format: dot (.) is thousands separator, comma (,) is decimal separator
+          // Example: "5.540,56" means 5540.56
+          const priceStr = goldData['gram-altin'].Satış
+            .replace(/\./g, '')  // Remove thousands separator (dot)
+            .replace(',', '.')   // Convert decimal separator (comma to dot)
+            .replace(/[^\d\.]/g, ''); // Remove any remaining non-numeric characters
+          price24k = parseFloat(priceStr) || 0;
         }
 
-        // Fallback to estimated price if APIs fail
-        console.warn('All gold price APIs failed, using fallback price');
-        const fallbackPrice24k = 2900; // Approximate 24k gold price in TRY
+        if (price24k > 0) {
+          // Calculate price for different karats
+          const karatPrice = (karat / 24) * price24k;
+          return Math.round(karatPrice * 100) / 100;
+        }
+
+        // Fallback to estimated price if API fails
+        console.warn('Gold price API returned invalid data, using fallback price');
+        const fallbackPrice24k = 5500; // Approximate 24k gold price in TRY (updated for 2025)
         const karatPrice = (karat / 24) * fallbackPrice24k;
         return Math.round(karatPrice * 100) / 100;
 
       } catch (error) {
         console.error('Error in getGoldPriceTRY:', error);
-        throw error;
+        // Return fallback price on error
+        const fallbackPrice24k = 5500;
+        const karatPrice = (karat / 24) * fallbackPrice24k;
+        return Math.round(karatPrice * 100) / 100;
       }
     });
   }
@@ -99,20 +78,38 @@ class AssetConversionService {
     const key = 'silver_TRY';
 
     return this.getPrice(key, async () => {
-      const response = await axios.get('https://api.genelpara.com/embed/altin.json', {
-        timeout: 5000
-      });
+      try {
+        const response = await axios.get('https://finans.truncgil.com/today.json', {
+          timeout: 5000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
 
-      const data = response.data;
+        const data = response.data;
 
-      // Look for silver data (usually GU - gümüş)
-      if (data.GU && data.GU.satis) {
-        return parseFloat(data.GU.satis) || 0;
+        // Look for silver data (gümüş)
+        if (data.gumus && data.gumus.Satış) {
+          // Turkish number format: dot is thousands separator, comma is decimal separator
+          const priceStr = data.gumus.Satış
+            .replace(/\./g, '')  // Remove thousands separator
+            .replace(',', '.')   // Convert decimal separator
+            .replace(/[^\d\.]/g, ''); // Remove any remaining non-numeric characters
+          const silverPrice = parseFloat(priceStr) || 0;
+          if (silverPrice > 0) {
+            return silverPrice;
+          }
+        }
+
+        // Fallback: approximate silver price (usually 1/85 of gold)
+        const goldPrice = await this.getGoldPriceTRY(24);
+        return Math.round((goldPrice / 85) * 100) / 100;
+      } catch (error) {
+        console.error('Error in getSilverPriceTRY:', error);
+        // Fallback to approximate silver price
+        const goldPrice = await this.getGoldPriceTRY(24);
+        return Math.round((goldPrice / 85) * 100) / 100;
       }
-
-      // Fallback: approximate silver price (usually 1/80 of gold)
-      const goldPrice = await this.getGoldPriceTRY(24);
-      return Math.round((goldPrice / 80) * 100) / 100;
     });
   }
 

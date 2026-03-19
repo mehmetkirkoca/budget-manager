@@ -240,6 +240,107 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ['id'],
         },
       },
+      {
+        name: 'get_notes',
+        description: 'Tüm notları getirir. Kategori, öncelik veya arama ile filtrelenebilir.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            category: {
+              type: 'string',
+              description: 'Kategori filtresi (personal, work, finance, health, other)',
+            },
+            priority: {
+              type: 'string',
+              description: 'Öncelik filtresi (low, medium, high)',
+            },
+            search: {
+              type: 'string',
+              description: 'Başlık veya içerikte arama',
+            },
+          },
+        },
+      },
+      {
+        name: 'create_note',
+        description: 'Yeni bir not oluşturur.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            title: {
+              type: 'string',
+              description: 'Not başlığı',
+            },
+            content: {
+              type: 'string',
+              description: 'Not içeriği',
+            },
+            category: {
+              type: 'string',
+              description: 'Kategori (personal, work, finance, health, other)',
+            },
+            priority: {
+              type: 'string',
+              description: 'Öncelik (low, medium, high)',
+            },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Etiketler',
+            },
+          },
+          required: ['title', 'content'],
+        },
+      },
+      {
+        name: 'update_note',
+        description: 'Var olan bir notu günceller.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              description: 'Güncellenecek notun ID\'si',
+            },
+            title: {
+              type: 'string',
+              description: 'Not başlığı',
+            },
+            content: {
+              type: 'string',
+              description: 'Not içeriği',
+            },
+            category: {
+              type: 'string',
+              description: 'Kategori',
+            },
+            priority: {
+              type: 'string',
+              description: 'Öncelik',
+            },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Etiketler',
+            },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'delete_note',
+        description: 'Bir notu siler.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              description: 'Silinecek notun ID\'si',
+            },
+          },
+          required: ['id'],
+        },
+      },
     ],
   };
 });
@@ -429,6 +530,83 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: 'text',
               text: `ID: ${args.id} olan varlık başarıyla silindi.`,
+            },
+          ],
+        };
+      }
+
+      case 'get_notes': {
+        const params = {};
+        if (args.category) params.category = args.category;
+        if (args.priority) params.priority = args.priority;
+        if (args.search) params.search = args.search;
+
+        const response = await api.get('/notes', { params });
+        const notes = response.data.notes;
+
+        const formatted = notes.map((note) => ({
+          id: note._id,
+          başlık: note.title,
+          içerik: note.content,
+          kategori: note.category,
+          öncelik: note.priority,
+          etiketler: note.tags,
+          tarih: formatDate(note.updatedAt),
+        }));
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Toplam ${formatted.length} not bulundu:\n\n${JSON.stringify(formatted, null, 2)}`,
+            },
+          ],
+        };
+      }
+
+      case 'create_note': {
+        const noteData = {
+          title: args.title,
+          content: args.content,
+          category: args.category || 'personal',
+          priority: args.priority || 'medium',
+          tags: args.tags || [],
+        };
+
+        const response = await api.post('/notes', noteData);
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not başarıyla oluşturuldu:\n\nBaşlık: ${response.data.title}\nKategori: ${response.data.category}\nÖncelik: ${response.data.priority}`,
+            },
+          ],
+        };
+      }
+
+      case 'update_note': {
+        const { id, ...updateData } = args;
+        const response = await api.put(`/notes/${id}`, updateData);
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Not başarıyla güncellendi:\n\nBaşlık: ${response.data.title}\nKategori: ${response.data.category}\nÖncelik: ${response.data.priority}`,
+            },
+          ],
+        };
+      }
+
+      case 'delete_note': {
+        await api.delete(`/notes/${args.id}`);
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `ID: ${args.id} olan not başarıyla silindi.`,
             },
           ],
         };

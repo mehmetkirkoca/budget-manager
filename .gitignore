@@ -49,3 +49,12 @@ dist-ssr
 # Excel files (optional - remove if you want to track them)
 *.xlsx
 *.xls
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# MCP server environment variables
+mcp-server/.env
+
+# Global Claude config (user-specific)
+.claude.json

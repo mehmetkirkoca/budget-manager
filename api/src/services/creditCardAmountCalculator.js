@@ -1,5 +1,6 @@
 const CreditCard = require('../models/CreditCard');
 const CreditCardInstallment = require('../models/CreditCardInstallment');
+const { CC_MIN_PAYMENT_RATE_LOW, CC_MIN_PAYMENT_RATE_HIGH, CC_MIN_PAYMENT_LIMIT_THRESHOLD } = require('../config/constants');
 
 class CreditCardAmountCalculator {
   constructor() {
@@ -68,9 +69,14 @@ class CreditCardAmountCalculator {
       // Option 2: Full balance + installments
       // We'll use minimum payment + installments as the estimated amount
 
-      const minimumPaymentRate = card.minimumPaymentRate || 0.03; // Default 3%
-      const minimumPayment = currentBalance * minimumPaymentRate;
-      const totalMonthlyPayment = minimumPayment + monthlyInstallments;
+      const minimumPaymentRate = card.minimumPaymentRate
+        ?? ((card.totalLimit > CC_MIN_PAYMENT_LIMIT_THRESHOLD) ? CC_MIN_PAYMENT_RATE_HIGH : CC_MIN_PAYMENT_RATE_LOW);
+      const totalRemainingInstallmentAmount = activeInstallments.reduce(
+        (sum, i) => sum + i.installmentAmount * i.remainingInstallments, 0
+      );
+      const pesinBalance = Math.max(0, currentBalance - totalRemainingInstallmentAmount);
+      const minimumPayment = Math.max(pesinBalance * minimumPaymentRate, CC_MIN_PAYMENT_FLOOR) + monthlyInstallments;
+      const totalMonthlyPayment = minimumPayment;
 
       return {
         cardId: cardId,

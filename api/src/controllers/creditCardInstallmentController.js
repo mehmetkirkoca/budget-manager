@@ -87,27 +87,31 @@ const createInstallment = async (request, reply) => {
       });
     }
     
-    // Set default interest rate from credit card if not provided
-    if (!installmentData.interestRate) {
+    // Set default interest rate from credit card if not explicitly provided
+    if (installmentData.interestRate === undefined || installmentData.interestRate === null) {
       installmentData.interestRate = creditCard.interestRate.monthly;
     }
-    
-    // Calculate payment dates
-    const purchaseDate = new Date(installmentData.purchaseDate);
-    const firstPaymentDate = new Date(purchaseDate);
-    firstPaymentDate.setDate(creditCard.paymentDueDay);
-    
-    if (firstPaymentDate <= purchaseDate) {
-      firstPaymentDate.setMonth(firstPaymentDate.getMonth() + 1);
+
+    // Calculate payment dates (skip if explicitly provided)
+    if (!installmentData.firstPaymentDate) {
+      const purchaseDate = new Date(installmentData.purchaseDate);
+      const firstPaymentDate = new Date(purchaseDate);
+      firstPaymentDate.setDate(creditCard.paymentDueDay);
+      if (firstPaymentDate <= purchaseDate) {
+        firstPaymentDate.setMonth(firstPaymentDate.getMonth() + 1);
+      }
+      installmentData.firstPaymentDate = firstPaymentDate;
     }
-    
-    installmentData.firstPaymentDate = firstPaymentDate;
-    installmentData.nextPaymentDate = firstPaymentDate;
-    
-    // Calculate last payment date
-    const lastPaymentDate = new Date(firstPaymentDate);
-    lastPaymentDate.setMonth(lastPaymentDate.getMonth() + installmentData.totalInstallments - 1);
-    installmentData.lastPaymentDate = lastPaymentDate;
+
+    if (!installmentData.nextPaymentDate) {
+      installmentData.nextPaymentDate = installmentData.firstPaymentDate;
+    }
+
+    if (!installmentData.lastPaymentDate) {
+      const lastPaymentDate = new Date(installmentData.firstPaymentDate);
+      lastPaymentDate.setMonth(lastPaymentDate.getMonth() + installmentData.totalInstallments - 1);
+      installmentData.lastPaymentDate = lastPaymentDate;
+    }
     
     const installment = new CreditCardInstallment(installmentData);
     await installment.save();
@@ -291,26 +295,23 @@ const updateInstallment = async (request, reply) => {
     const { id } = request.params;
     const updateData = request.body;
     
-    // Remove fields that shouldn't be updated directly
-    delete updateData.completedInstallments;
-    delete updateData.remainingInstallments;
+    // paymentHistory doğrudan güncellenmez
     delete updateData.paymentHistory;
-    
-    const installment = await CreditCardInstallment.findByIdAndUpdate(
-      id, 
-      updateData, 
-      { new: true, runValidators: true }
-    )
-    .populate('creditCard', 'name bankName cardNumber')
-    .populate('category', 'name color');
-    
+
+    const installment = await CreditCardInstallment.findById(id);
     if (!installment) {
-      return reply.status(404).send({ 
-        error: 'Not Found', 
-        message: 'Installment not found' 
+      return reply.status(404).send({
+        error: 'Not Found',
+        message: 'Installment not found'
       });
     }
-    
+
+    Object.assign(installment, updateData);
+    await installment.save();
+
+    await installment.populate('creditCard', 'name bankName cardNumber');
+    await installment.populate('category', 'name color');
+
     reply.send(installment);
   } catch (error) {
     request.log.error(error);

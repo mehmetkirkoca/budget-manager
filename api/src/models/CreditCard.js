@@ -1,4 +1,14 @@
 const mongoose = require('mongoose');
+const {
+  CC_MIN_PAYMENT_RATE_LOW,
+  CC_MIN_PAYMENT_FLOOR,
+  CC_AKDI_RATE_TIER1,
+  CC_AKDI_ANNUAL_RATE_TIER1,
+  CC_DEFAULT_LATE_FEE,
+  CC_DEFAULT_OVERLIMIT_FEE,
+  CC_DEFAULT_CASH_ADV_RATE,
+  CC_DEFAULT_GRACE_DAYS,
+} = require('../config/constants');
 
 const creditCardSchema = new mongoose.Schema({
   name: {
@@ -47,7 +57,7 @@ const creditCardSchema = new mongoose.Schema({
     required: true,
     min: 0,
     max: 1,
-    default: 0.03 // 3% default minimum payment rate
+    default: CC_MIN_PAYMENT_RATE_LOW
   },
   interestRate: {
     monthly: {
@@ -55,14 +65,14 @@ const creditCardSchema = new mongoose.Schema({
       required: true,
       min: 0,
       max: 1,
-      default: 0.0299 // 2.99% monthly default
+      default: CC_AKDI_RATE_TIER1
     },
     annual: {
       type: Number,
       required: true,
       min: 0,
       max: 10,
-      default: 0.359 // 35.9% annual default
+      default: CC_AKDI_ANNUAL_RATE_TIER1
     }
   },
   statementDay: {
@@ -81,12 +91,12 @@ const creditCardSchema = new mongoose.Schema({
   },
   gracePeriodDays: {
     type: Number,
-    default: 45,
+    default: CC_DEFAULT_GRACE_DAYS,
     min: 0
   },
   cashAdvanceRate: {
     type: Number,
-    default: 0.04, // 4% monthly for cash advance
+    default: CC_DEFAULT_CASH_ADV_RATE,
     min: 0,
     max: 1
   },
@@ -97,11 +107,11 @@ const creditCardSchema = new mongoose.Schema({
     },
     latePaymentFee: {
       type: Number,
-      default: 50
+      default: CC_DEFAULT_LATE_FEE
     },
     overlimitFee: {
       type: Number,
-      default: 100
+      default: CC_DEFAULT_OVERLIMIT_FEE
     }
   },
   isActive: {
@@ -170,12 +180,12 @@ creditCardSchema.methods.calculateNextPaymentDue = function() {
 };
 
 // Method to calculate minimum payment
-creditCardSchema.methods.calculateMinimumPayment = function() {
-  const balance = this.currentBalance;
-  const minimumFromRate = balance * this.minimumPaymentRate;
-  const minimumFixed = 50; // Minimum 50 TL payment
-  
-  return Math.max(minimumFromRate, minimumFixed);
+// monthlyInstallments: bu ay ödenecek zorunlu taksit toplamı
+// totalRemainingInstallmentAmount: kalan tüm taksit borcu (gelecek aylar dahil)
+creditCardSchema.methods.calculateMinimumPayment = function(monthlyInstallments = 0, totalRemainingInstallmentAmount = 0) {
+  const pesinBalance = Math.max(0, this.currentBalance - totalRemainingInstallmentAmount);
+  const minimumFromRate = pesinBalance * this.minimumPaymentRate;
+  return Math.max(minimumFromRate, CC_MIN_PAYMENT_FLOOR) + monthlyInstallments;
 };
 
 // Method to update available limit

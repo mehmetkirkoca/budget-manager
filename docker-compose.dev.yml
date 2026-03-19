@@ -65,6 +65,8 @@ services:
       - ./api/src:/app/src:ro
       - ./api/package.json:/app/package.json:ro
       - ./api/start-dev.sh:/app/start-dev.sh:ro
+    env_file:
+      - ./api/.env
     environment:
       NODE_ENV: development
       PORT: 3000

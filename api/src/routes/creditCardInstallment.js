@@ -109,7 +109,11 @@ async function creditCardInstallmentRoutes(fastify, options) {
           originalAmount: { type: 'number', minimum: 1 },
           totalInstallments: { type: 'integer', minimum: 1, maximum: 36 },
           interestRate: { type: 'number', minimum: 0, maximum: 1 },
+          completedInstallments: { type: 'integer', minimum: 0, default: 0 },
           purchaseDate: { type: 'string', format: 'date' },
+          firstPaymentDate: { type: 'string', format: 'date' },
+          nextPaymentDate: { type: 'string', format: 'date' },
+          lastPaymentDate: { type: 'string', format: 'date' },
           installmentType: { 
             type: 'string', 
             enum: ['equal', 'balloon', 'interest_first', 'principal_first'],

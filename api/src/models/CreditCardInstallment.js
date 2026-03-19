@@ -196,7 +196,7 @@ creditCardInstallmentSchema.virtual('daysUntilPayment').get(function() {
 });
 
 // Pre-save middleware to calculate derived fields
-creditCardInstallmentSchema.pre('save', function(next) {
+creditCardInstallmentSchema.pre('validate', function(next) {
   // Calculate remaining installments
   this.remainingInstallments = this.totalInstallments - this.completedInstallments;
   

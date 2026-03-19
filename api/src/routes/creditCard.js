@@ -7,7 +7,8 @@ const {
   getCreditCardSummary,
   getCreditCardDetails,
   updateCreditCardBalance,
-  getPaymentCalendar
+  getPaymentCalendar,
+  calculateCreditCardInterest
 } = require('../controllers/creditCardController');
 
 async function creditCardRoutes(fastify, options) {
@@ -136,6 +137,22 @@ async function creditCardRoutes(fastify, options) {
     }
   }, updateCreditCardBalance);
   
+  // Calculate credit card interest scenarios
+  fastify.post('/credit-cards/:id/calculate-interest', {
+    schema: {
+      params: { type: 'object', properties: { id: { type: 'string' } } },
+      body: {
+        type: 'object',
+        required: ['payment_amount'],
+        properties: {
+          payment_amount: { type: 'number', minimum: 0 },
+          akdi_faiz_rate: { type: 'number', minimum: 0, maximum: 1 },
+          gecikme_faiz_rate: { type: 'number', minimum: 0, maximum: 1 }
+        }
+      }
+    }
+  }, calculateCreditCardInterest);
+
   // Delete credit card (soft delete)
   fastify.delete('/credit-cards/:id', {
     schema: {

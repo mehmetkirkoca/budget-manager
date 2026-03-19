@@ -27,6 +27,8 @@ services:
       dockerfile: Dockerfile
     container_name: budget_api
     restart: unless-stopped
+    env_file:
+      - ./api/.env
     environment:
       NODE_ENV: production
       PORT: 3000

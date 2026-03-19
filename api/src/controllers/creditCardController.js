@@ -1,5 +1,14 @@
 const CreditCard = require('../models/CreditCard');
 const CreditCardInstallment = require('../models/CreditCardInstallment');
+const {
+  CC_MIN_PAYMENT_RATE_LOW,
+  CC_MIN_PAYMENT_RATE_HIGH,
+  CC_MIN_PAYMENT_LIMIT_THRESHOLD,
+  CC_MIN_PAYMENT_FLOOR,
+  CC_AKDI_RATE_TIER1, CC_AKDI_RATE_TIER2, CC_AKDI_RATE_TIER3,
+  CC_AKDI_TIER1_THRESHOLD, CC_AKDI_TIER2_THRESHOLD,
+  CC_GECIKME_RATE_TIER1, CC_GECIKME_RATE_TIER2, CC_GECIKME_RATE_TIER3,
+} = require('../config/constants');
 
 // Get all credit cards
 const getAllCreditCards = async (request, reply) => {
@@ -246,8 +255,12 @@ const updateCreditCardBalance = async (request, reply) => {
     
     creditCard.currentBalance = currentBalance || creditCard.currentBalance;
     creditCard.availableLimit = availableLimit || (creditCard.totalLimit - currentBalance);
-    creditCard.minimumPaymentAmount = creditCard.calculateMinimumPayment();
-    
+
+    const installments = await CreditCardInstallment.find({ creditCard: id, paymentStatus: 'active' });
+    const monthlyInstallments = installments.reduce((sum, i) => sum + i.installmentAmount, 0);
+    const totalRemainingInstallmentAmount = installments.reduce((sum, i) => sum + i.installmentAmount * i.remainingInstallments, 0);
+    creditCard.minimumPaymentAmount = creditCard.calculateMinimumPayment(monthlyInstallments, totalRemainingInstallmentAmount);
+
     await creditCard.save();
     
     reply.send(creditCard);
@@ -330,6 +343,133 @@ const getPaymentCalendar = async (request, reply) => {
   }
 };
 
+// Calculate credit card interest scenarios
+const calculateCreditCardInterest = async (request, reply) => {
+  try {
+    const { id } = request.params;
+    const { payment_amount, akdi_faiz_rate, gecikme_faiz_rate } = request.body;
+
+    const creditCard = await CreditCard.findById(id);
+    if (!creditCard) {
+      return reply.status(404).send({
+        error: 'Not Found',
+        message: 'Credit card not found'
+      });
+    }
+
+    const balance = creditCard.currentBalance || 0;
+
+    // Taksit verilerini çek
+    const installments = await CreditCardInstallment.find({ creditCard: id, paymentStatus: 'active' });
+    const monthlyInstallmentTotal = installments.reduce((sum, i) => sum + i.installmentAmount, 0);
+    const totalRemainingInstallmentAmount = installments.reduce((sum, i) => sum + i.installmentAmount * i.remainingInstallments, 0);
+
+    // Peşin bakiye: taksit borçları çıkarılır
+    const pesinBalance = Math.max(0, balance - totalRemainingInstallmentAmount);
+
+    // Asgari ödeme oranı: kart limitine göre iki kademe (BDDK)
+    const defaultMinRate = (creditCard.totalLimit > CC_MIN_PAYMENT_LIMIT_THRESHOLD)
+      ? CC_MIN_PAYMENT_RATE_HIGH
+      : CC_MIN_PAYMENT_RATE_LOW;
+    const minRate = creditCard.minimumPaymentRate ?? defaultMinRate;
+    const minPayment = creditCard.minimumPaymentAmount
+      ? creditCard.minimumPaymentAmount
+      : Math.max(pesinBalance * minRate, CC_MIN_PAYMENT_FLOOR) + monthlyInstallmentTotal;
+
+    // Akdi faiz: peşin bakiyeye göre üç kademe (TCMB)
+    const defaultAkdiRate = pesinBalance < CC_AKDI_TIER1_THRESHOLD ? CC_AKDI_RATE_TIER1
+      : pesinBalance < CC_AKDI_TIER2_THRESHOLD                     ? CC_AKDI_RATE_TIER2
+      :                                                               CC_AKDI_RATE_TIER3;
+    const akdiRate = akdi_faiz_rate ?? creditCard.interestRate?.monthly ?? defaultAkdiRate;
+
+    // Gecikme faizi: peşin bakiyeye göre üç kademe (TCMB)
+    const defaultGecikmeRate = pesinBalance < CC_AKDI_TIER1_THRESHOLD ? CC_GECIKME_RATE_TIER1
+      : pesinBalance < CC_AKDI_TIER2_THRESHOLD                        ? CC_GECIKME_RATE_TIER2
+      :                                                                  CC_GECIKME_RATE_TIER3;
+    const gecikmeRate = gecikme_faiz_rate ?? defaultGecikmeRate;
+    const lateFee = creditCard.fees?.latePaymentFee || 0;
+    const userPayment = payment_amount;
+
+    // Faiz yalnızca peşin bakiyeye uygulanır; taksitler kendi faizini taşır
+    // Senaryo 1: Tam ödeme
+    const fullPayment = { payment: balance, interest: 0, nextMonthBalance: 0 };
+
+    // Senaryo 2: Asgari ödeme
+    // Asgari ödeme = max(pesinBalance * oran, taban) + zorunlu taksitler
+    // Ödeme sonrası kalan peşin: pesinBalance - (minPayment - monthlyInstallmentTotal)
+    const minPesinPaid = minPayment - monthlyInstallmentTotal;
+    const minPesinRemaining = Math.max(0, pesinBalance - minPesinPaid);
+    const minInterest = minPesinRemaining * akdiRate;
+    const minPaymentScenario = {
+      payment: minPayment,
+      interest: minInterest,
+      nextMonthBalance: minPesinRemaining + minInterest + (totalRemainingInstallmentAmount - monthlyInstallmentTotal)
+    };
+
+    // Senaryo 3: Hiç ödeme yapılmaz (gecikme faizi)
+    const noPaymentInterest = pesinBalance * gecikmeRate;
+    const noPayment = {
+      payment: 0,
+      interest: noPaymentInterest,
+      nextMonthBalance: balance + noPaymentInterest + lateFee,
+      lateFee
+    };
+
+    // Senaryo 4: Özel ödeme tutarı
+    let customPayment;
+    if (userPayment >= balance) {
+      customPayment = { payment: userPayment, interest: 0, nextMonthBalance: 0, type: 'full_payment' };
+    } else if (userPayment >= minPayment) {
+      const pesinPaid = userPayment - monthlyInstallmentTotal;
+      const remainingPesin = Math.max(0, pesinBalance - pesinPaid);
+      const interest = remainingPesin * akdiRate;
+      customPayment = {
+        payment: userPayment,
+        interest,
+        nextMonthBalance: remainingPesin + interest + (totalRemainingInstallmentAmount - monthlyInstallmentTotal),
+        type: 'akdi_faiz'
+      };
+    } else if (userPayment > 0) {
+      const interest = pesinBalance * gecikmeRate;
+      customPayment = {
+        payment: userPayment,
+        interest,
+        nextMonthBalance: balance - userPayment + interest + lateFee,
+        lateFee,
+        type: 'gecikme_faizi'
+      };
+    } else {
+      customPayment = { ...noPayment, type: 'gecikme_faizi_no_payment' };
+    }
+
+    reply.send({
+      card: {
+        id: creditCard._id,
+        bankName: creditCard.bankName,
+        name: creditCard.name,
+        balance,
+        pesinBalance,
+        monthlyInstallmentTotal,
+        minPayment,
+        akdiRate,
+        gecikmeRate
+      },
+      scenarios: {
+        fullPayment,
+        minPayment: minPaymentScenario,
+        noPayment,
+        customPayment
+      }
+    });
+  } catch (error) {
+    request.log.error(error);
+    reply.status(500).send({
+      error: 'Internal Server Error',
+      message: 'Failed to calculate credit card interest'
+    });
+  }
+};
+
 module.exports = {
   getAllCreditCards,
   getCreditCardById,
@@ -339,5 +479,6 @@ module.exports = {
   getCreditCardSummary,
   getCreditCardDetails,
   updateCreditCardBalance,
-  getPaymentCalendar
+  getPaymentCalendar,
+  calculateCreditCardInterest
 };

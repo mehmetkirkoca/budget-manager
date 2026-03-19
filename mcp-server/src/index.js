@@ -306,12 +306,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           id: asset._id,
           ad: asset.name,
           tip: asset.type,
-          mevcutDeğer: formatCurrency(asset.currentValue, asset.currency),
-          hedefDeğer: asset.targetValue
-            ? formatCurrency(asset.targetValue, asset.currency)
+          mevcutDeğer: formatCurrency(asset.currentValueTRY ?? asset.currentAmount ?? 0),
+          hedefDeğer: asset.targetValueTRY || asset.targetAmount
+            ? formatCurrency(asset.targetValueTRY ?? asset.targetAmount ?? 0)
             : 'Yok',
-          ilerleme: asset.targetValue
-            ? `%${((asset.currentValue / asset.targetValue) * 100).toFixed(1)}`
+          ilerleme: asset.targetValueTRY || asset.targetAmount
+            ? `%${(((asset.currentValueTRY ?? asset.currentAmount ?? 0) / (asset.targetValueTRY ?? asset.targetAmount ?? 1)) * 100).toFixed(1)}`
             : 'N/A',
         }));
 
@@ -340,7 +340,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: 'text',
-              text: `Yeni varlık başarıyla oluşturuldu:\n\nAd: ${response.data.name}\nTip: ${response.data.type}\nMevcut Değer: ${formatCurrency(response.data.currentValue, response.data.currency)}${response.data.targetValue ? `\nHedef Değer: ${formatCurrency(response.data.targetValue, response.data.currency)}` : ''}`,
+              text: `Yeni varlık başarıyla oluşturuldu:\n\nAd: ${response.data.name}\nTip: ${response.data.type}\nMevcut Değer: ${formatCurrency(response.data.currentAmount ?? 0)}${response.data.targetAmount ? `\nHedef Değer: ${formatCurrency(response.data.targetAmount)}` : ''}`,
             },
           ],
         };
@@ -415,7 +415,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: 'text',
-              text: `Varlık başarıyla güncellendi:\n\nAd: ${response.data.name}\nTip: ${response.data.type}\nMevcut Değer: ${formatCurrency(response.data.currentValue, response.data.currency)}`,
+              text: `Varlık başarıyla güncellendi:\n\nAd: ${response.data.name}\nTip: ${response.data.type}\nMevcut Değer: ${formatCurrency(response.data.currentAmount ?? 0)}`,
             },
           ],
         };

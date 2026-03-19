@@ -69,6 +69,8 @@ services:
       NODE_ENV: development
       PORT: 3000
       MONGODB_URI: mongodb://admin:password123@mongodb:27017/budget-manager?authSource=admin
+    ports:
+      - "3000:3000"
     depends_on:
       mongodb:
         condition: service_healthy

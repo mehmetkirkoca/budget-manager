@@ -366,14 +366,16 @@ const CreditCardItem = ({ card, onDelete, onUploadStatement, onEdit, t }) => {
         </div>
 
         {card.nextPaymentDue && (
-          <div className="text-sm">
-            <span className="text-gray-500 dark:text-gray-400">{t('nextPayment')}: </span>
+          <div className="text-sm flex justify-between items-center">
+            <span className="text-gray-500 dark:text-gray-400">{t('nextPayment')}</span>
             <span className={`font-medium ${
               daysUntilPayment <= 3 ? 'text-red-600 dark:text-red-400' :
               daysUntilPayment <= 7 ? 'text-yellow-600 dark:text-yellow-400' :
               'text-green-600 dark:text-green-400'
             }`}>
-              {daysUntilPayment > 0 ? `${daysUntilPayment} ${t('days')}` : t('overdue')}
+              {new Date(card.nextPaymentDue).toLocaleDateString('tr-TR')}
+              {' '}
+              ({daysUntilPayment > 0 ? `${daysUntilPayment} ${t('days')}` : t('overdue')})
             </span>
           </div>
         )}

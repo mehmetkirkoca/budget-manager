@@ -27,7 +27,12 @@ const parseStatementUpload = async (request, reply) => {
     const bankSlug = card.bankName.toLowerCase().replace(/\s+/g, '_');
     const dir      = path.join(UPLOADS_DIR, period);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, `${bankSlug}_${Date.now()}.pdf`), buffer);
+    const hash     = require('crypto').createHash('sha256').update(buffer).digest('hex').slice(0, 16);
+    const filename = `${bankSlug}_${hash}.pdf`;
+    const dest     = path.join(dir, filename);
+    if (!fs.existsSync(dest)) {
+      fs.writeFileSync(dest, buffer);
+    }
   } catch (err) {
     request.log.warn('Statement PDF could not be saved: ' + err.message);
   }

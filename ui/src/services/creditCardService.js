@@ -78,6 +78,29 @@ export const creditCardService = {
     return response.json();
   },
 
+  // Upload statement PDF and get parsed preview
+  async uploadStatementPDF(cardId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE_URL}/credit-cards/${cardId}/statement/parse`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) throw new Error('Failed to parse statement');
+    return response.json();
+  },
+
+  // Import parsed statement data into DB
+  async importStatement(cardId, payload) {
+    const response = await fetch(`${API_BASE_URL}/credit-cards/${cardId}/statement/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error('Failed to import statement');
+    return response.json();
+  },
+
   // Get payment calendar
   async getPaymentCalendar(month, year) {
     const params = new URLSearchParams();

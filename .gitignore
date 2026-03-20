@@ -29,6 +29,9 @@ lerna-debug.log*
 *.db-journal
 api/data/
 
+# Uploaded statement PDFs
+api/uploads/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

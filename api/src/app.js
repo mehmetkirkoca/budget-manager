@@ -16,6 +16,7 @@ const exportRoutes = require('./routes/export');
 const importRoutes = require('./routes/import');
 const noteRoutes = require('./routes/notes');
 const healthRoutes = require('./routes/health');
+const statementRoutes = require('./routes/statement');
 
 // Connect to MongoDB
 connectDB();
@@ -23,6 +24,11 @@ connectDB();
 // Register CORS plugin
 fastify.register(require('@fastify/cors'), {
   origin: '*', // Allow all origins for now
+});
+
+// Register multipart plugin for PDF uploads
+fastify.register(require('@fastify/multipart'), {
+  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB
 });
 
 // Register auto-process middleware
@@ -41,6 +47,7 @@ fastify.register(creditCardInstallmentRoutes, { prefix: '/api' });
 fastify.register(exportRoutes, { prefix: '/api' });
 fastify.register(importRoutes, { prefix: '/api/import' });
 fastify.register(noteRoutes, { prefix: '/api/notes' });
+fastify.register(statementRoutes, { prefix: '/api' });
 // Health route registered separately without /api prefix since it's already in the route definition
 
 // Health check routes

@@ -58,8 +58,8 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
         </div>
 
         {/* Content */}
-        <div 
-          className="flex-1 overflow-y-auto custom-scrollbar" 
+        <div
+          className="flex-1 overflow-y-auto custom-scrollbar p-4"
           style={{
             scrollbarWidth: 'thin',
             scrollbarColor: '#d1d5db #f9fafb'

@@ -201,7 +201,19 @@ const resources = {
       statementDayMustBeBetween1And31: 'Statement day must be between 1 and 31',
       paymentDueDayMustBeBetween1And31: 'Payment due day must be between 1 and 31',
       errorSavingCard: 'Error saving credit card',
-      
+
+      // Statement Upload
+      uploadStatement: 'Upload Statement',
+      selectPdfFile: 'Select PDF file',
+      dragOrClick: 'Drag & drop or click to select',
+      statementParsed: 'Statement parsed successfully',
+      parseError: 'Could not read statement. Please enter card details manually.',
+      errorImportStatement: 'Error importing statement',
+      statementDebt: 'Statement Balance',
+      statementMinPayment: 'Minimum Payment',
+      statementDate: 'Statement Date',
+      statementDueDate: 'Payment Due Date',
+
       // Installments
       editInstallment: 'Edit Installment',
       purchaseInformation: 'Purchase Information',
@@ -516,7 +528,19 @@ const resources = {
       statementDayMustBeBetween1And31: 'Ekstre günü 1 ile 31 arasında olmalıdır',
       paymentDueDayMustBeBetween1And31: 'Son ödeme günü 1 ile 31 arasında olmalıdır',
       errorSavingCard: 'Kredi kartı kaydedilirken hata oluştu',
-      
+
+      // Statement Upload
+      uploadStatement: 'Ekstre Yükle',
+      selectPdfFile: 'PDF dosyası seçin',
+      dragOrClick: 'Sürükleyip bırakın veya tıklayın',
+      statementParsed: 'Ekstre başarıyla okundu',
+      parseError: 'Ekstre okunamadı. Kart bilgilerini manuel olarak girin.',
+      errorImportStatement: 'Ekstre içe aktarılırken hata oluştu',
+      statementDebt: 'Dönem Borcu',
+      statementMinPayment: 'Asgari Ödeme',
+      statementDate: 'Hesap Kesim Tarihi',
+      statementDueDate: 'Son Ödeme Tarihi',
+
       // Installments
       editInstallment: 'Taksit Düzenle',
       purchaseInformation: 'Alışveriş Bilgileri',

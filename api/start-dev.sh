@@ -10,7 +10,7 @@ const Expense = require('./src/models/Expense');
 
 async function checkAndSeed() {
   try {
-    const mongoUri = 'mongodb://admin:password123@mongodb:27017/budget-manager?authSource=admin';
+    const mongoUri = process.env.MONGODB_URI;
     
     // Wait for MongoDB to be ready
     while (true) {

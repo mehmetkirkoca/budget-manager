@@ -33,6 +33,8 @@ services:
       NODE_ENV: production
       PORT: 3000
       MONGODB_URI: mongodb://mongodb:27017/budget-manager
+    volumes:
+      - ./api/uploads:/app/uploads
     depends_on:
       mongodb:
         condition: service_healthy

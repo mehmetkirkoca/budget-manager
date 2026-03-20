@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiPlus, FiCreditCard, FiBarChart, FiCalendar, FiAlertCircle, FiTrash } from 'react-icons/fi';
+import { FiPlus, FiCreditCard, FiBarChart, FiCalendar, FiAlertCircle, FiTrash, FiUpload } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { creditCardService, creditCardUtils } from '../services/creditCardService';
 import Modal from '../components/Modal';
 import InstallmentForm from '../components/InstallmentForm';
 import CreditCardForm from '../components/CreditCardForm';
+import StatementUploadModal from '../components/StatementUploadModal';
 
 const CreditCards = () => {
   const { t } = useTranslation();
@@ -17,6 +18,8 @@ const CreditCards = () => {
   const [selectedCardId, setSelectedCardId] = useState(null);
   const [showCreditCardModal, setShowCreditCardModal] = useState(false);
   const [editingCard, setEditingCard] = useState(null);
+  const [showStatementModal, setShowStatementModal] = useState(false);
+  const [statementCardId, setStatementCardId] = useState(null);
 
   useEffect(() => {
     document.title = `${t('creditCards')} - ${t('appTitle')}`;
@@ -56,6 +59,11 @@ const CreditCards = () => {
   const handleAddInstallment = (cardId) => {
     setSelectedCardId(cardId);
     setShowInstallmentModal(true);
+  };
+
+  const handleUploadStatement = (cardId) => {
+    setStatementCardId(cardId);
+    setShowStatementModal(true);
   };
 
   const handleInstallmentSave = (savedInstallment) => {
@@ -240,11 +248,11 @@ const CreditCards = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {creditCards.map(card => (
-                <CreditCardItem 
-                  key={card._id} 
-                  card={card} 
+                <CreditCardItem
+                  key={card._id}
+                  card={card}
                   onDelete={() => handleDeleteCard(card._id)}
-                  onAddInstallment={() => handleAddInstallment(card._id)}
+                  onUploadStatement={() => handleUploadStatement(card._id)}
                   onEdit={() => handleEditCard(card)}
                   t={t}
                 />
@@ -281,11 +289,27 @@ const CreditCards = () => {
           onCancel={handleCreditCardCancel}
         />
       </Modal>
+
+      {/* Statement Upload Modal */}
+      <Modal
+        isOpen={showStatementModal}
+        onClose={() => { setShowStatementModal(false); setStatementCardId(null); }}
+        title={t('uploadStatement')}
+        size="lg"
+      >
+        {statementCardId && (
+          <StatementUploadModal
+            cardId={statementCardId}
+            onClose={() => { setShowStatementModal(false); setStatementCardId(null); }}
+            onImported={() => { setShowStatementModal(false); setStatementCardId(null); fetchCreditCardData(); }}
+          />
+        )}
+      </Modal>
     </div>
   );
 };
 
-const CreditCardItem = ({ card, onDelete, onAddInstallment, onEdit, t }) => {
+const CreditCardItem = ({ card, onDelete, onUploadStatement, onEdit, t }) => {
   const utilizationRate = ((card.totalLimit - card.availableLimit) / card.totalLimit) * 100;
   const daysUntilPayment = creditCardUtils.getDaysUntilPayment(card.nextPaymentDue);
 
@@ -353,6 +377,35 @@ const CreditCardItem = ({ card, onDelete, onAddInstallment, onEdit, t }) => {
             </span>
           </div>
         )}
+
+        {(card.currentBalance > 0 || card.minimumPaymentAmount > 0 || card.lastStatementDate) && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-1 space-y-1 text-sm">
+            {card.currentBalance > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('statementDebt')}</span>
+                <span className="font-semibold text-red-600 dark:text-red-400">
+                  {creditCardUtils.formatCurrency(card.currentBalance)}
+                </span>
+              </div>
+            )}
+            {card.minimumPaymentAmount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('statementMinPayment')}</span>
+                <span className="font-medium text-gray-700 dark:text-gray-200">
+                  {creditCardUtils.formatCurrency(card.minimumPaymentAmount)}
+                </span>
+              </div>
+            )}
+            {card.lastStatementDate && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">{t('statementDate')}</span>
+                <span className="font-medium text-gray-700 dark:text-gray-200">
+                  {new Date(card.lastStatementDate).toLocaleDateString('tr-TR')}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex space-x-2 mt-4">
@@ -363,10 +416,11 @@ const CreditCardItem = ({ card, onDelete, onAddInstallment, onEdit, t }) => {
           {t('edit')}
         </button>
         <button
-          onClick={onAddInstallment}
-          className="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-center text-sm transition-colors"
+          onClick={onUploadStatement}
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-center text-sm transition-colors flex items-center justify-center"
         >
-          {t('addInstallment')}
+          <FiUpload className="mr-1" />
+          {t('uploadStatement')}
         </button>
         <button
           onClick={() => {

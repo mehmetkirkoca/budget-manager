@@ -1,9 +1,11 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
-// GET all expenses
-export const getAllExpenses = async () => {
+// GET all expenses (paginated)
+export const getAllExpenses = async (page = 1, limit = 25, status = 'pending') => {
   try {
-    const response = await fetch(`${API_BASE_URL}/expenses`);
+    const params = new URLSearchParams({ page, limit });
+    if (status !== 'all') params.append('status', status);
+    const response = await fetch(`${API_BASE_URL}/expenses?${params}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

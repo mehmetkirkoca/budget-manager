@@ -23,8 +23,8 @@ const expenseSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Beklenen', 'Gerçekleşti'],
-    default: 'Gerçekleşti'
+    enum: ['pending', 'completed'],
+    default: 'completed'
   },
   recurringPaymentId: {
     type: mongoose.Schema.Types.ObjectId,

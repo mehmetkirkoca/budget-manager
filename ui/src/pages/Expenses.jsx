@@ -1,12 +1,15 @@
 
 import { useState, useEffect } from 'react';
 import DynamicTable from '../components/DynamicTable';
+import Pagination from '../components/Pagination';
 import Modal from '../components/Modal';
 import ExpenseForm from '../components/ExpenseForm';
 import { getAllExpenses, createExpense, updateExpense, deleteExpense } from '../services/expenseService';
 import { getAllCategories } from '../services/categoryService';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
+
+const PAGE_SIZE = 25;
 
 const Expenses = () => {
   const { t } = useTranslation();
@@ -15,50 +18,46 @@ const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+  const [statusFilter, setStatusFilter] = useState('pending');
 
   useEffect(() => {
     document.title = `${t('expenses')} - ${t('appTitle')}`;
   }, [t]);
 
-  // Fetch expenses and categories from API on component mount
   useEffect(() => {
-    fetchData();
+    fetchData(currentPage, statusFilter);
+  }, [currentPage, statusFilter]);
+
+  useEffect(() => {
+    getAllCategories().then(setCategories).catch(console.error);
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (page, status) => {
     try {
       setLoading(true);
-      const [expensesData, categoriesData] = await Promise.all([
-        getAllExpenses(),
-        getAllCategories()
-      ]);
-      setExpenses(expensesData);
-      setCategories(categoriesData);
+      const data = await getAllExpenses(page, PAGE_SIZE, status);
+      setExpenses(data.expenses);
+      setPagination(data.pagination);
     } catch (error) {
-      console.error('Failed to fetch data:', error);
+      console.error('Failed to fetch expenses:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper function to get category name from populated category object or fallback
   const getCategoryDisplayName = (categoryValue) => {
-    // If it's a populated object with name property
     if (categoryValue && typeof categoryValue === 'object' && categoryValue.name) {
       return categoryValue.name;
     }
-
-    // If it's a string name (legacy data)
     if (typeof categoryValue === 'string' && categoryValue.length < 24) {
       return categoryValue;
     }
-
-    // If it's an ObjectId string, find the category name
     if (typeof categoryValue === 'string' && categoryValue.length === 24) {
       const category = categories.find(cat => cat._id === categoryValue);
       return category ? category.name : categoryValue;
     }
-
     return categoryValue || 'Unknown';
   };
 
@@ -71,7 +70,15 @@ const Expenses = () => {
     if (window.confirm(t('confirmDelete'))) {
       try {
         await deleteExpense(expense._id);
-        setExpenses(expenses.filter(e => e._id !== expense._id));
+        // Sayfadaki son kayıt silindiyse bir önceki sayfaya dön
+        const newTotal = pagination.total - 1;
+        const newPages = Math.ceil(newTotal / PAGE_SIZE);
+        const targetPage = currentPage > newPages ? Math.max(1, newPages) : currentPage;
+        if (targetPage !== currentPage) {
+          setCurrentPage(targetPage);
+        } else {
+          fetchData(currentPage);
+        }
       } catch (error) {
         console.error('Failed to delete expense:', error);
         alert('Failed to delete expense');
@@ -87,17 +94,12 @@ const Expenses = () => {
   const handleSave = async (expenseData) => {
     try {
       if (editingExpense) {
-        // Update existing expense
-        const updatedExpense = await updateExpense(editingExpense._id, expenseData);
-        setExpenses(expenses.map(expense => 
-          expense._id === editingExpense._id ? updatedExpense : expense
-        ));
+        await updateExpense(editingExpense._id, expenseData);
       } else {
-        // Add new expense
-        const newExpense = await createExpense(expenseData);
-        setExpenses([...expenses, newExpense]);
+        await createExpense(expenseData);
       }
       handleModalClose();
+      fetchData(currentPage);
     } catch (error) {
       console.error('Failed to save expense:', error);
       alert('Failed to save expense');
@@ -116,8 +118,8 @@ const Expenses = () => {
       key: 'amount',
       render: (row) => <span className={row.status === 'pending' ? 'text-yellow-500' : 'text-green-500'}>{row.amount.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</span>
     },
-    { 
-      header: t('date'), 
+    {
+      header: t('date'),
       key: 'date',
       render: (row) => new Date(row.date).toLocaleDateString('tr-TR')
     },
@@ -166,7 +168,7 @@ const Expenses = () => {
 
   return (
     <div className="container mx-auto">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">{t('expenseTransactions')}</h2>
         <button onClick={() => setModalOpen(true)} className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
             <FiPlus className="mr-2"/>
@@ -174,12 +176,41 @@ const Expenses = () => {
         </button>
       </div>
 
+      <div className="flex space-x-2 mb-6">
+        {['pending', 'completed', 'all'].map((s) => (
+          <button
+            key={s}
+            onClick={() => { setStatusFilter(s); setCurrentPage(1); }}
+            className={`px-4 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+              statusFilter === s
+                ? s === 'pending'
+                  ? 'bg-yellow-100 border-yellow-400 text-yellow-800'
+                  : s === 'completed'
+                  ? 'bg-green-100 border-green-400 text-green-800'
+                  : 'bg-blue-100 border-blue-400 text-blue-800'
+                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            {s === 'pending' ? t('pending') : s === 'completed' ? t('completed') : t('all')}
+          </button>
+        ))}
+      </div>
+
       {expenses.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-gray-500">{t('noData')}</p>
         </div>
       ) : (
-        <DynamicTable columns={columns} data={expenses} />
+        <>
+          <DynamicTable columns={columns} data={expenses} />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            onPageChange={setCurrentPage}
+            totalItems={pagination.total}
+            itemsPerPage={PAGE_SIZE}
+          />
+        </>
       )}
 
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingExpense ? t('editExpense') : t('addExpense')}>

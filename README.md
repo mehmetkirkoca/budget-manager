@@ -164,6 +164,63 @@ budget-manager/
 - Input validation
 - Health checks
 
+## MCP Server (Claude Code Integration)
+
+Budget Manager includes an MCP (Model Context Protocol) server that lets you manage your finances directly from [Claude Code](https://claude.ai/code) using natural language.
+
+### Prerequisites
+
+- Node.js 18+
+- The Budget Manager app must be running (`make up`)
+
+### Setup
+
+1. Install MCP server dependencies:
+
+```bash
+cd mcp-server
+npm install
+```
+
+2. Configure the API URL (optional — defaults to `http://localhost/api`):
+
+```bash
+cp mcp-server/.env.example mcp-server/.env
+# Edit BUDGET_API_URL if your setup differs
+```
+
+3. The project already includes a `.mcp.json` file at the root, so Claude Code picks up the MCP server automatically when you open this directory. No additional configuration needed.
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `get_expenses` | List expenses with optional filters |
+| `create_expense` | Add a new expense |
+| `update_expense` | Update an existing expense |
+| `delete_expense` | Delete an expense |
+| `get_expenses_by_category` | Expenses grouped by category |
+| `get_assets` | List all assets |
+| `create_asset` | Add a new asset |
+| `update_asset` | Update an existing asset |
+| `delete_asset` | Delete an asset |
+| `get_summary` | Get overall financial summary |
+| `get_notes` | List notes |
+| `create_note` | Add a new note |
+| `update_note` | Update a note |
+| `delete_note` | Delete a note |
+| `get_credit_cards` | List credit cards with statement status |
+| `get_credit_card_statement` | Get detailed statement for a card |
+| `calculate_credit_card_interest` | Simulate interest for a given payment amount |
+
+### Usage Example
+
+Once Claude Code is running inside this project, you can ask things like:
+
+> *"Show me my expenses for this month"*
+> *"Add a 500 TL grocery expense for today"*
+> *"If I pay half my Akbank balance, how much interest will I owe?"*
+
 ## Contributing
 
 1. Fork the repository

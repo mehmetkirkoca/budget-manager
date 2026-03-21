@@ -56,6 +56,21 @@ export const updateExpense = async (id, expenseData) => {
   }
 };
 
+// GET expenses grouped by category (for charts)
+export const getExpensesByCategory = async (month) => {
+  try {
+    const params = month ? `?month=${month}` : '';
+    const response = await fetch(`${API_BASE_URL}/expenses/by-category${params}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching expenses by category:', error);
+    throw error;
+  }
+};
+
 // DELETE expense
 export const deleteExpense = async (id) => {
   try {

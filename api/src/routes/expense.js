@@ -30,7 +30,9 @@ async function expenseRoutes(fastify, options) {
   fastify.post('/expenses', { schema: postExpenseSchema }, expenseController.createExpense);
   fastify.put('/expenses/:id', expenseController.updateExpense);
   fastify.delete('/expenses/:id', expenseController.deleteExpense);
-  fastify.get('/expenses/by-category', expenseController.getExpensesByCategory);
+  fastify.get('/expenses/by-category', {
+    schema: { querystring: { type: 'object', properties: { month: { type: 'string', pattern: '^\\d{4}-\\d{2}$' } } } }
+  }, expenseController.getExpensesByCategory);
 }
 
 module.exports = expenseRoutes;

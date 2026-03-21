@@ -16,7 +16,6 @@ import DropZone from '../components/DropZone';
 import WidgetSelector from '../components/WidgetSelector';
 import WidgetColumn from '../components/WidgetColumn';
 import { getSummary } from '../services/dashboardService';
-import { getAllExpenses } from '../services/expenseService';
 import { getAllAssets } from '../services/assetService';
 import { useWidgetLayout } from '../hooks/useWidgetLayout';
 import { FiTrendingUp, FiTrendingDown, FiDollarSign, FiActivity, FiRefreshCw, FiPlus, FiEdit, FiCheck, FiX } from 'react-icons/fi';
@@ -54,7 +53,6 @@ const Dashboard = () => {
     totalBalance: 0,
     totalAssets: 0
   });
-  const [expenseData, setExpenseData] = useState([]);
   const [assetData, setAssetData] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -66,20 +64,17 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [summary, expenses, assets] = await Promise.all([
+      const [summary, assets] = await Promise.all([
         getSummary(),
-        getAllExpenses(),
         getAllAssets()
       ]);
-      
+
       setSummaryData({
         monthlyIncome: summary.monthlyIncome,
         monthlyExpenses: summary.monthlyExpenses,
         totalBalance: summary.totalBalance,
         totalAssets: summary.totalAssets
       });
-      
-      setExpenseData(expenses);
       setAssetData(assets);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -106,7 +101,7 @@ const Dashboard = () => {
       case 'expense-chart':
         return (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-            <ExpensePieChart data={expenseData} />
+            <ExpensePieChart />
           </div>
         );
       case 'asset-progress':

@@ -81,27 +81,26 @@ const deleteExpense = async (request, reply) => {
 
 const getExpensesByCategory = async (request, reply) => {
   try {
-    const expensesByCategory = await Expense.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          totalAmount: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $project: {
-          category: '$_id',
-          totalAmount: 1,
-          count: 1,
-          _id: 0
-        }
-      },
-      {
-        $sort: { totalAmount: -1 }
-      }
-    ]);
+    const { month } = request.query; // format: YYYY-MM
+    const matchStage = {};
+    if (month) {
+      const [year, mon] = month.split('-').map(Number);
+      matchStage.date = {
+        $gte: new Date(year, mon - 1, 1),
+        $lt: new Date(year, mon, 1)
+      };
+    }
 
+    const pipeline = [
+      ...(Object.keys(matchStage).length ? [{ $match: matchStage }] : []),
+      { $group: { _id: '$category', totalAmount: { $sum: '$amount' }, count: { $sum: 1 } } },
+      { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'categoryInfo' } },
+      { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+      { $project: { category: { _id: '$_id', name: { $ifNull: ['$categoryInfo.name', 'Unknown'] }, color: { $ifNull: ['$categoryInfo.color', '#8884d8'] } }, totalAmount: 1, count: 1, _id: 0 } },
+      { $sort: { totalAmount: -1 } }
+    ];
+
+    const expensesByCategory = await Expense.aggregate(pipeline);
     reply.send(expensesByCategory);
   } catch (err) {
     reply.status(500).send({ error: err.message });

@@ -3,10 +3,10 @@
     "budget-manager": {
       "command": "node",
       "args": [
-        "/home/mehmet/Documents/budget/mcp-server/src/index.js"
+        "./mcp-server/src/index.js"
       ],
       "env": {
-        "BUDGET_API_URL": "http://localhost:3000/api"
+        "BUDGET_API_URL": "http://localhost/api"
       }
     }
   }

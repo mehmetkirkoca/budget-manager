@@ -305,8 +305,9 @@ const getPaymentCalendar = async (request, reply) => {
       calendar.push({
         type: 'card_payment',
         date: card.nextPaymentDue,
-        title: `${card.bankName} ${card.name} - Minimum Payment`,
+        title: `${card.bankName} ${card.name}`,
         amount: card.minimumPaymentAmount,
+        totalAmount: card.currentBalance,
         cardInfo: {
           id: card._id,
           name: card.name,

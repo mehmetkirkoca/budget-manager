@@ -764,7 +764,6 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: 'en', // Varsayılan dil İngilizce
     fallbackLng: 'en',
     debug: true,
     

@@ -99,7 +99,7 @@ const AssetForm = ({ onClose, asset, onSave }) => {
       </div>
       
       <div>
-        <label htmlFor="assetType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Varlık Cinsi</label>
+        <label htmlFor="assetType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('assetKind')}</label>
         <select
           id="assetType"
           value={assetType}
@@ -110,29 +110,29 @@ const AssetForm = ({ onClose, asset, onSave }) => {
           }}
           className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
         >
-          <option value="currency">Para (TRY/USD…)</option>
-          <option value="gold">Altın</option>
-          <option value="silver">Gümüş</option>
-          <option value="crypto">Kripto</option>
-          <option value="stock">Hisse / Fon</option>
+          <option value="currency">{t('currencyType')}</option>
+          <option value="gold">{t('gold')}</option>
+          <option value="silver">{t('silver')}</option>
+          <option value="crypto">{t('crypto')}</option>
+          <option value="stock">{t('stock')}</option>
         </select>
       </div>
 
       {assetType === 'gold' && (
         <div>
-          <label htmlFor="goldKarat" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Saflık (Ayar)</label>
+          <label htmlFor="goldKarat" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('purity')}</label>
           <select
             id="goldKarat"
             value={goldKarat}
             onChange={e => setGoldKarat(e.target.value)}
             className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
           >
-            <option value={8}>8 Ayar</option>
-            <option value={14}>14 Ayar</option>
-            <option value={18}>18 Ayar</option>
-            <option value={21}>21 Ayar</option>
-            <option value={22}>22 Ayar</option>
-            <option value={24}>24 Ayar (Has)</option>
+            <option value={8}>{t('karat8')}</option>
+            <option value={14}>{t('karat14')}</option>
+            <option value={18}>{t('karat18')}</option>
+            <option value={21}>{t('karat21')}</option>
+            <option value={22}>{t('karat22')}</option>
+            <option value={24}>{t('karat24')}</option>
           </select>
         </div>
       )}

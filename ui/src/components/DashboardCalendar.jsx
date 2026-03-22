@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { FiCalendar, FiChevronLeft, FiChevronRight, FiGrid, FiList } from 'react-icons/fi';
 
 const Tooltip = ({ payment, anchorRef }) => {
+  const { t } = useTranslation();
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef(null);
 
@@ -36,27 +37,27 @@ const Tooltip = ({ payment, anchorRef }) => {
       {isCC ? (
         <>
           <div className="flex justify-between gap-4">
-            <span className="text-gray-400">Min. Ödeme</span>
+            <span className="text-gray-400">{t('minPayment')}</span>
             <span className="text-yellow-300 font-medium">{fmt(payment.amount)}</span>
           </div>
           <div className="flex justify-between gap-4 mt-0.5">
-            <span className="text-gray-400">Toplam Borç</span>
+            <span className="text-gray-400">{t('totalDebt')}</span>
             <span className="text-red-300 font-medium">{fmt(payment.totalAmount)}</span>
           </div>
         </>
       ) : isExpense ? (
         <>
           <div className="flex justify-between gap-4">
-            <span className="text-gray-400">Tutar</span>
+            <span className="text-gray-400">{t('amount')}</span>
             <span className="text-yellow-300 font-medium">{fmt(payment.amount)}</span>
           </div>
           <div className="text-gray-500 mt-1 border-t border-gray-700 pt-1">
-            {payment._expenseType === 'pending' ? 'Bekliyor' : 'Tamamlandı'}
+            {payment._expenseType === 'pending' ? t('awaitingPayment') : t('completed')}
           </div>
         </>
       ) : (
         <div className="flex justify-between gap-4">
-          <span className="text-gray-400">Tutar</span>
+          <span className="text-gray-400">{t('amount')}</span>
           <span className="text-yellow-300 font-medium">{fmt(payment.effectiveAmount || payment.amount)}</span>
         </div>
       )}
@@ -226,7 +227,7 @@ const DashboardCalendar = ({ monthlyIncome = 0 }) => {
       .toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
   };
 
-  const weekDays = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+  const weekDays = t('weekdays', { returnObjects: true });
   const weekDates = getWeekDates();
 
   return (
@@ -235,21 +236,21 @@ const DashboardCalendar = ({ monthlyIncome = 0 }) => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-2">
           <FiCalendar className="text-blue-500" size={20} />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upcoming Payments</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('upcomingPayments')}</h3>
         </div>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-1">
             <button
               onClick={() => setViewMode('weekly')}
               className={`p-2 rounded ${viewMode === 'weekly' ? 'bg-blue-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'}`}
-              title="Haftalık"
+              title={t('weeklyView')}
             >
               <FiList size={16} />
             </button>
             <button
               onClick={() => setViewMode('monthly')}
               className={`p-2 rounded ${viewMode === 'monthly' ? 'bg-blue-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'}`}
-              title="Aylık"
+              title={t('monthlyView')}
             >
               <FiGrid size={16} />
             </button>
@@ -354,21 +355,21 @@ const DashboardCalendar = ({ monthlyIncome = 0 }) => {
             return (
               <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 space-y-1.5 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-500 dark:text-gray-400">Bu ay toplam ödeme</span>
+                  <span className="text-gray-500 dark:text-gray-400">{t('thisMonthPayments')}</span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {fmt(monthTotal)}
-                    <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">({monthPayments.length} kalem)</span>
+                    <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">({monthPayments.length})</span>
                   </span>
                 </div>
                 {ccMin > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-500 dark:text-gray-400">Asgari ödeme (KK)</span>
+                    <span className="text-gray-500 dark:text-gray-400">{t('minimumPaymentCC')}</span>
                     <span className="font-medium text-blue-600 dark:text-blue-400">{fmt(ccMin)}</span>
                   </div>
                 )}
                 {monthlyIncome > 0 && (
                   <div className="flex justify-between items-center pt-1 border-t border-gray-100 dark:border-gray-700">
-                    <span className="text-gray-500 dark:text-gray-400">Aylık açık</span>
+                    <span className="text-gray-500 dark:text-gray-400">{t('monthlyBalance')}</span>
                     <span className={`font-semibold ${deficit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {deficit >= 0 ? '+' : ''}{fmt(deficit)}
                     </span>

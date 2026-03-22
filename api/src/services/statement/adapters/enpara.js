@@ -22,10 +22,15 @@ module.exports.parse = (text) => {
   // First "Son ödeme tarihi" with a date (not the "Bir sonraki" sentence)
   const dueDateMatch  = text.match(/Son ödeme tarihi\s*(\d{2}\/\d{2}\/\d{4})/);
 
-  const statementDate  = stmtDateMatch ? parseDate(stmtDateMatch[1]) : null;
-  const totalDebt      = debtMatch     ? parseTR(debtMatch[1])       : null;
-  const minPayment     = minPayMatch   ? parseTR(minPayMatch[1])     : null;
-  const paymentDueDate = dueDateMatch  ? parseDate(dueDateMatch[1])  : null;
+  const totalLimitMatch     = text.match(/Kart limiti\s*([\d.]+,\d+)\s*TL/);
+  const availLimitMatch     = text.match(/Kullan[ıi]labilir kart limiti\s*([\d.]+,\d+)\s*TL/i);
+
+  const statementDate  = stmtDateMatch     ? parseDate(stmtDateMatch[1])  : null;
+  const totalDebt      = debtMatch         ? parseTR(debtMatch[1])        : null;
+  const minPayment     = minPayMatch       ? parseTR(minPayMatch[1])      : null;
+  const paymentDueDate = dueDateMatch      ? parseDate(dueDateMatch[1])   : null;
+  const totalLimit     = totalLimitMatch   ? parseTR(totalLimitMatch[1])  : null;
+  const availableLimit = availLimitMatch   ? parseTR(availLimitMatch[1])  : null;
 
   // --- Transactions ---
   // Format: DD/MM/YYYYDescription [installment] [-] amount TL
@@ -58,5 +63,5 @@ module.exports.parse = (text) => {
     });
   }
 
-  return { statementDate, paymentDueDate, totalDebt, minPayment, transactions };
+  return { statementDate, paymentDueDate, totalDebt, minPayment, totalLimit, availableLimit, transactions };
 };

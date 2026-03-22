@@ -11,6 +11,8 @@ const postAssetSchema = {
       currentAmount: { type: 'number', minimum: 0 },
       targetAmount: { type: 'number', minimum: 0 },
       unit: { type: 'string' },
+      assetType: { type: 'string', enum: ['currency', 'gold', 'silver', 'crypto', 'stock'] },
+      goldKarat: { type: 'number', minimum: 8, maximum: 24 },
     },
   },
 };
@@ -25,6 +27,8 @@ const putAssetSchema = {
       currentAmount: { type: 'number', minimum: 0 },
       targetAmount: { type: 'number', minimum: 0 },
       unit: { type: 'string' },
+      assetType: { type: 'string', enum: ['currency', 'gold', 'silver', 'crypto', 'stock'] },
+      goldKarat: { type: 'number', minimum: 8, maximum: 24 },
     },
   },
 };

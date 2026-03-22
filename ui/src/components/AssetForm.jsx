@@ -10,6 +10,8 @@ const AssetForm = ({ onClose, asset, onSave }) => {
   const [currentAmount, setCurrentAmount] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [unit, setUnit] = useState('TRY');
+  const [assetType, setAssetType] = useState('currency');
+  const [goldKarat, setGoldKarat] = useState(24);
 
   useEffect(() => {
     if (asset) {
@@ -19,6 +21,8 @@ const AssetForm = ({ onClose, asset, onSave }) => {
       setCurrentAmount(asset.currentAmount?.toString() || '0');
       setTargetAmount(asset.targetAmount?.toString() || '');
       setUnit(asset.unit || 'TRY');
+      setAssetType(asset.assetType || 'currency');
+      setGoldKarat(asset.goldKarat || 24);
     } else {
       setName('');
       setType('');
@@ -26,6 +30,8 @@ const AssetForm = ({ onClose, asset, onSave }) => {
       setCurrentAmount('0');
       setTargetAmount('');
       setUnit('TRY');
+      setAssetType('currency');
+      setGoldKarat(24);
     }
   }, [asset]);
 
@@ -36,13 +42,15 @@ const AssetForm = ({ onClose, asset, onSave }) => {
       return;
     }
     
-    const assetData = { 
+    const assetData = {
       name: name.trim(),
       type,
       description: description.trim(),
       currentAmount: parseFloat(currentAmount) || 0,
       targetAmount: parseFloat(targetAmount),
-      unit: unit.trim()
+      unit: unit.trim(),
+      assetType,
+      ...(assetType === 'gold' && { goldKarat: parseInt(goldKarat) }),
     };
     
     // Call the onSave callback with the asset data
@@ -90,6 +98,45 @@ const AssetForm = ({ onClose, asset, onSave }) => {
         </select>
       </div>
       
+      <div>
+        <label htmlFor="assetType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Varlık Cinsi</label>
+        <select
+          id="assetType"
+          value={assetType}
+          onChange={e => {
+            setAssetType(e.target.value);
+            if (e.target.value === 'gold' || e.target.value === 'silver') setUnit('gr');
+            else if (e.target.value === 'currency') setUnit('TRY');
+          }}
+          className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+        >
+          <option value="currency">Para (TRY/USD…)</option>
+          <option value="gold">Altın</option>
+          <option value="silver">Gümüş</option>
+          <option value="crypto">Kripto</option>
+          <option value="stock">Hisse / Fon</option>
+        </select>
+      </div>
+
+      {assetType === 'gold' && (
+        <div>
+          <label htmlFor="goldKarat" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Saflık (Ayar)</label>
+          <select
+            id="goldKarat"
+            value={goldKarat}
+            onChange={e => setGoldKarat(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value={8}>8 Ayar</option>
+            <option value={14}>14 Ayar</option>
+            <option value={18}>18 Ayar</option>
+            <option value={21}>21 Ayar</option>
+            <option value={22}>22 Ayar</option>
+            <option value={24}>24 Ayar (Has)</option>
+          </select>
+        </div>
+      )}
+
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('description')}</label>
         <input 

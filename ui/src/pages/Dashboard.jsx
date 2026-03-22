@@ -113,7 +113,7 @@ const Dashboard = () => {
       case 'calendar':
         return (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-            <DashboardCalendar />
+            <DashboardCalendar monthlyIncome={summaryData.monthlyIncome} />
           </div>
         );
       case 'auto-process':

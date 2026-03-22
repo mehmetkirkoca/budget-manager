@@ -118,7 +118,7 @@ const WeekPaymentDot = ({ payment }) => {
   );
 };
 
-const DashboardCalendar = () => {
+const DashboardCalendar = ({ monthlyIncome = 0 }) => {
   const { t } = useTranslation();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -336,10 +336,10 @@ const DashboardCalendar = () => {
               );
             })}
           </div>
-          {/* Aylık Toplam */}
+          {/* Aylık Özet */}
           {(() => {
+            const fmt = v => Number(v).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
             const today = new Date();
-            const displayedYear = today.getFullYear();
             const displayedMonth = (today.getMonth() + currentMonth + 12) % 12;
             const displayedFullYear = today.getFullYear() + Math.floor((today.getMonth() + currentMonth) / 12);
             const monthPayments = payments.filter(p => {
@@ -347,13 +347,33 @@ const DashboardCalendar = () => {
               return d.getFullYear() === displayedFullYear && d.getMonth() === displayedMonth;
             });
             const monthTotal = monthPayments.reduce((sum, p) => sum + (p.effectiveAmount || p.amount || 0), 0);
+            const ccMin = monthPayments
+              .filter(p => p._ccType === 'card_payment')
+              .reduce((sum, p) => sum + (p.amount || 0), 0);
+            const deficit = monthlyIncome - monthTotal;
             return (
-              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Bu ay toplam ödeme</span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {monthTotal.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
-                  <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">({monthPayments.length} kalem)</span>
-                </span>
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 space-y-1.5 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 dark:text-gray-400">Bu ay toplam ödeme</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {fmt(monthTotal)}
+                    <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">({monthPayments.length} kalem)</span>
+                  </span>
+                </div>
+                {ccMin > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500 dark:text-gray-400">Asgari ödeme (KK)</span>
+                    <span className="font-medium text-blue-600 dark:text-blue-400">{fmt(ccMin)}</span>
+                  </div>
+                )}
+                {monthlyIncome > 0 && (
+                  <div className="flex justify-between items-center pt-1 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-gray-500 dark:text-gray-400">Aylık açık</span>
+                    <span className={`font-semibold ${deficit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {deficit >= 0 ? '+' : ''}{fmt(deficit)}
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })()}

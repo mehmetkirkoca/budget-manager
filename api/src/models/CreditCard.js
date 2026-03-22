@@ -135,7 +135,14 @@ const creditCardSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: 0
-  }
+  },
+  lastStatementTransactions: [{
+    date:          { type: String },
+    description:   { type: String },
+    amount:        { type: Number },
+    isCredit:      { type: Boolean, default: false },
+    isInstallment: { type: Boolean, default: false },
+  }]
 }, {
   timestamps: true
 });

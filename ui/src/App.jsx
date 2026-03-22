@@ -8,7 +8,7 @@ import Categories from './pages/Categories';
 import RecurringPayments from './pages/RecurringPayments';
 import CreditCards from './pages/CreditCards';
 import CreditCardForm from './components/CreditCardForm';
-import CreditCardInstallments from './pages/CreditCardInstallments';
+import CreditCardPayment from './pages/CreditCardPayment';
 import CreditCardCalendar from './pages/CreditCardCalendar';
 import Export from './pages/Export';
 import ImportData from './pages/ImportData';
@@ -27,7 +27,7 @@ function App() {
           <Route path="recurring-payments" element={<RecurringPayments />} />
           <Route path="credit-cards" element={<CreditCards />} />
           <Route path="credit-cards/new" element={<CreditCardForm />} />
-          <Route path="credit-cards/installments" element={<CreditCardInstallments />} />
+          <Route path="credit-cards/payment" element={<CreditCardPayment />} />
           <Route path="credit-cards/calendar" element={<CreditCardCalendar />} />
           <Route path="notes" element={<Notes />} />
           <Route path="export" element={<Export />} />

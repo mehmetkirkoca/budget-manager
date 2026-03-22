@@ -8,6 +8,7 @@ const {
   CC_AKDI_RATE_TIER1, CC_AKDI_RATE_TIER2, CC_AKDI_RATE_TIER3,
   CC_AKDI_TIER1_THRESHOLD, CC_AKDI_TIER2_THRESHOLD,
   CC_GECIKME_RATE_TIER1, CC_GECIKME_RATE_TIER2, CC_GECIKME_RATE_TIER3,
+  CC_BSMV_RATE, CC_KKDF_RATE,
 } = require('../config/constants');
 
 // Get all credit cards
@@ -365,8 +366,9 @@ const calculateCreditCardInterest = async (request, reply) => {
     const monthlyInstallmentTotal = installments.reduce((sum, i) => sum + i.installmentAmount, 0);
     const totalRemainingInstallmentAmount = installments.reduce((sum, i) => sum + i.installmentAmount * i.remainingInstallments, 0);
 
-    // Peşin bakiye: taksit borçları çıkarılır
-    const pesinBalance = Math.max(0, balance - totalRemainingInstallmentAmount);
+    // Peşin bakiye: bu ayın borcundan sadece bu aya ait taksit tutarları çıkarılır.
+    // totalRemainingInstallmentAmount gelecek ayların taksitlerini de içerdiğinden kullanılmaz.
+    const pesinBalance = Math.max(0, balance - monthlyInstallmentTotal);
 
     // Asgari ödeme oranı: kart limitine göre iki kademe (BDDK)
     const defaultMinRate = (creditCard.totalLimit > CC_MIN_PAYMENT_LIMIT_THRESHOLD)
@@ -381,7 +383,7 @@ const calculateCreditCardInterest = async (request, reply) => {
     const defaultAkdiRate = pesinBalance < CC_AKDI_TIER1_THRESHOLD ? CC_AKDI_RATE_TIER1
       : pesinBalance < CC_AKDI_TIER2_THRESHOLD                     ? CC_AKDI_RATE_TIER2
       :                                                               CC_AKDI_RATE_TIER3;
-    const akdiRate = akdi_faiz_rate ?? creditCard.interestRate?.monthly ?? defaultAkdiRate;
+    const akdiRate = akdi_faiz_rate ?? defaultAkdiRate;
 
     // Gecikme faizi: peşin bakiyeye göre üç kademe (TCMB)
     const defaultGecikmeRate = pesinBalance < CC_AKDI_TIER1_THRESHOLD ? CC_GECIKME_RATE_TIER1
@@ -391,6 +393,9 @@ const calculateCreditCardInterest = async (request, reply) => {
     const lateFee = creditCard.fees?.latePaymentFee || 0;
     const userPayment = payment_amount;
 
+    // BSMV + KKDF çarpanı: faiz üzerine uygulanır
+    const taxMultiplier = 1 + CC_BSMV_RATE + CC_KKDF_RATE; // 1.30
+
     // Faiz yalnızca peşin bakiyeye uygulanır; taksitler kendi faizini taşır
     // Senaryo 1: Tam ödeme
     const fullPayment = { payment: balance, interest: 0, nextMonthBalance: 0 };
@@ -398,17 +403,18 @@ const calculateCreditCardInterest = async (request, reply) => {
     // Senaryo 2: Asgari ödeme
     // Asgari ödeme = max(pesinBalance * oran, taban) + zorunlu taksitler
     // Ödeme sonrası kalan peşin: pesinBalance - (minPayment - monthlyInstallmentTotal)
-    const minPesinPaid = minPayment - monthlyInstallmentTotal;
+    // Math.max(0,...) ile negatif pesinPaid (minPayment < monthlyInstallmentTotal durumu) kısıtlanır
+    const minPesinPaid = Math.max(0, minPayment - monthlyInstallmentTotal);
     const minPesinRemaining = Math.max(0, pesinBalance - minPesinPaid);
-    const minInterest = minPesinRemaining * akdiRate;
+    const minInterest = minPesinRemaining * akdiRate * taxMultiplier;
     const minPaymentScenario = {
       payment: minPayment,
       interest: minInterest,
-      nextMonthBalance: minPesinRemaining + minInterest + (totalRemainingInstallmentAmount - monthlyInstallmentTotal)
+      nextMonthBalance: minPesinRemaining + minInterest
     };
 
     // Senaryo 3: Hiç ödeme yapılmaz (gecikme faizi)
-    const noPaymentInterest = pesinBalance * gecikmeRate;
+    const noPaymentInterest = pesinBalance * gecikmeRate * taxMultiplier;
     const noPayment = {
       payment: 0,
       interest: noPaymentInterest,
@@ -421,17 +427,17 @@ const calculateCreditCardInterest = async (request, reply) => {
     if (userPayment >= balance) {
       customPayment = { payment: userPayment, interest: 0, nextMonthBalance: 0, type: 'full_payment' };
     } else if (userPayment >= minPayment) {
-      const pesinPaid = userPayment - monthlyInstallmentTotal;
+      const pesinPaid = Math.max(0, userPayment - monthlyInstallmentTotal);
       const remainingPesin = Math.max(0, pesinBalance - pesinPaid);
-      const interest = remainingPesin * akdiRate;
+      const interest = remainingPesin * akdiRate * taxMultiplier;
       customPayment = {
         payment: userPayment,
         interest,
-        nextMonthBalance: remainingPesin + interest + (totalRemainingInstallmentAmount - monthlyInstallmentTotal),
+        nextMonthBalance: remainingPesin + interest,
         type: 'akdi_faiz'
       };
     } else if (userPayment > 0) {
-      const interest = pesinBalance * gecikmeRate;
+      const interest = pesinBalance * gecikmeRate * taxMultiplier;
       customPayment = {
         payment: userPayment,
         interest,

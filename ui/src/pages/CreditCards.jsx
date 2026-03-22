@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FiPlus, FiCreditCard, FiBarChart, FiCalendar, FiAlertCircle, FiTrash, FiUpload } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiPlus, FiCreditCard, FiBarChart, FiCalendar, FiAlertCircle, FiTrash, FiUpload, FiDollarSign } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { creditCardService, creditCardUtils } from '../services/creditCardService';
 import Modal from '../components/Modal';
@@ -10,6 +10,7 @@ import StatementUploadModal from '../components/StatementUploadModal';
 
 const CreditCards = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [creditCards, setCreditCards] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -137,11 +138,11 @@ const CreditCards = () => {
         
         <div className="flex space-x-3">
           <Link
-            to="/credit-cards/installments"
+            to="/credit-cards/payment"
             className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center"
           >
-            <FiBarChart className="mr-2" />
-            {t('installments')}
+            <FiDollarSign className="mr-2" />
+            Ödeme & Taksitler
           </Link>
           <Link
             to="/credit-cards/calendar"
@@ -254,6 +255,7 @@ const CreditCards = () => {
                   onDelete={() => handleDeleteCard(card._id)}
                   onUploadStatement={() => handleUploadStatement(card._id)}
                   onEdit={() => handleEditCard(card)}
+                  onPayment={() => navigate(`/credit-cards/payment?card=${card._id}`)}
                   t={t}
                 />
               ))}
@@ -309,7 +311,7 @@ const CreditCards = () => {
   );
 };
 
-const CreditCardItem = ({ card, onDelete, onUploadStatement, onEdit, t }) => {
+const CreditCardItem = ({ card, onDelete, onUploadStatement, onEdit, onPayment, t }) => {
   const utilizationRate = ((card.totalLimit - card.availableLimit) / card.totalLimit) * 100;
   const daysUntilPayment = creditCardUtils.getDaysUntilPayment(card.nextPaymentDue);
 
@@ -419,10 +421,17 @@ const CreditCardItem = ({ card, onDelete, onUploadStatement, onEdit, t }) => {
         </button>
         <button
           onClick={onUploadStatement}
-          className="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-center text-sm transition-colors flex items-center justify-center"
+          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-center text-sm transition-colors flex items-center justify-center"
         >
           <FiUpload className="mr-1" />
           {t('uploadStatement')}
+        </button>
+        <button
+          onClick={onPayment}
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-center text-sm transition-colors flex items-center justify-center"
+        >
+          <FiDollarSign className="mr-1" />
+          Ödeme
         </button>
         <button
           onClick={() => {

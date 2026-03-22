@@ -101,6 +101,17 @@ export const creditCardService = {
     return response.json();
   },
 
+  // Calculate interest for a given payment amount
+  async calculateInterest(id, paymentAmount) {
+    const response = await fetch(`${API_BASE_URL}/credit-cards/${id}/calculate-interest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payment_amount: paymentAmount }),
+    });
+    if (!response.ok) throw new Error('Failed to calculate interest');
+    return response.json();
+  },
+
   // Get payment calendar
   async getPaymentCalendar(month, year) {
     const params = new URLSearchParams();

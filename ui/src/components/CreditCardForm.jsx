@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSave, FiX, FiCreditCard } from 'react-icons/fi';
+import { FiSave, FiX } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { creditCardService } from '../services/creditCardService';
 
@@ -20,10 +20,6 @@ const CreditCardForm = ({ creditCard = null, onSave, onCancel }) => {
     statementDay: creditCard?.statementDay || 1,
     paymentDueDay: creditCard?.paymentDueDay || 15,
     minimumPaymentRate: creditCard?.minimumPaymentRate || 0.03,
-    interestRate: {
-      monthly: creditCard?.interestRate?.monthly || 0.0299,
-      annual: creditCard?.interestRate?.annual || 0.359
-    },
     gracePeriodDays: creditCard?.gracePeriodDays || 45,
     cashAdvanceRate: creditCard?.cashAdvanceRate || 0.04,
     fees: {
@@ -308,56 +304,6 @@ const CreditCardForm = ({ creditCard = null, onSave, onCancel }) => {
                   }`}
                 />
                 {errors.paymentDueDay && <p className="mt-1 text-sm text-red-500">{errors.paymentDueDay}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Interest Rates */}
-          <div>
-            <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-3">{t('interestRates')}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('monthlyInterestRate')} (%)
-                </label>
-                <input
-                  type="number"
-                  name="interestRate.monthly"
-                  value={(formData.interestRate.monthly * 100).toFixed(2)}
-                  onChange={(e) => handleInputChange({
-                    target: {
-                      name: 'interestRate.monthly',
-                      value: parseFloat(e.target.value) / 100,
-                      type: 'number'
-                    }
-                  })}
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('annualInterestRate')} (%)
-                </label>
-                <input
-                  type="number"
-                  name="interestRate.annual"
-                  value={(formData.interestRate.annual * 100).toFixed(2)}
-                  onChange={(e) => handleInputChange({
-                    target: {
-                      name: 'interestRate.annual',
-                      value: parseFloat(e.target.value) / 100,
-                      type: 'number'
-                    }
-                  })}
-                  min="0"
-                  max="1000"
-                  step="0.01"
-                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                />
               </div>
             </div>
           </div>

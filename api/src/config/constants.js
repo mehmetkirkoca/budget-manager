@@ -28,6 +28,10 @@ module.exports = {
   // --- Nakit Avans (TCMB, 1 Oca 2026) ---
   CC_DEFAULT_CASH_ADV_RATE:       parseFloat(process.env.CC_DEFAULT_CASH_ADV_RATE),       // 0.0425
 
+  // --- Vergi (BSMV + KKDF) ---
+  CC_BSMV_RATE:  parseFloat(process.env.CC_BSMV_RATE),   // 0.15
+  CC_KKDF_RATE:  parseFloat(process.env.CC_KKDF_RATE),   // 0.15
+
   // --- Diğer ---
   CC_DEFAULT_GRACE_DAYS:          parseInt(process.env.CC_DEFAULT_GRACE_DAYS),            // 45    — faizsiz dönem (gün)
   CC_DEFAULT_LATE_FEE:            parseFloat(process.env.CC_DEFAULT_LATE_FEE),            // 50    — gecikme ücreti (TL, bankaya göre değişir)

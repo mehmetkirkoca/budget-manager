@@ -49,6 +49,7 @@ const importStatement = async (request, reply) => {
     minPayment,
     totalLimit,
     availableLimit,
+    transactions = [],
     installmentTransactions = [],
   } = request.body;
 
@@ -71,6 +72,7 @@ const importStatement = async (request, reply) => {
   if (minPayment     != null) card.minimumPaymentAmount = minPayment;
   if (statementDate)          card.lastStatementDate    = new Date(statementDate);
   if (paymentDueDate)         card.nextPaymentDue       = new Date(paymentDueDate);
+  if (transactions.length > 0) card.lastStatementTransactions = transactions;
   await card.save();
 
   // Auto-create installment records for taksit transactions

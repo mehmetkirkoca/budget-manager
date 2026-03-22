@@ -70,6 +70,7 @@ const StatementUploadModal = ({ cardId, onClose, onImported }) => {
             paymentDueDate:          parsed.paymentDueDate,
             totalLimit:              parsed.totalLimit,
             availableLimit:          parsed.availableLimit,
+            transactions:            transactions,
             installmentTransactions: transactions.filter(t => t.isInstallment),
           };
 

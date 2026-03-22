@@ -21,7 +21,7 @@ const AssetProgress = ({ assets }) => {
       <h3 className="font-bold mb-4 text-lg">{t('assetTargets')}</h3>
       {assets.length > 0 ? (
         <div className="space-y-4">
-          {assets.map((asset, index) => {
+          {[...assets].sort((a, b) => (b.currentValueTRY ?? b.currentAmount) - (a.currentValueTRY ?? a.currentAmount)).map((asset, index) => {
             const progress = calculateProgress(asset.currentAmount, asset.targetAmount);
             const progressColor = getProgressColor(progress);
             return (

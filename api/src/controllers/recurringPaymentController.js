@@ -81,19 +81,48 @@ const updateRecurringPayment = async (request, reply) => {
   try {
     const { id } = request.params;
     const updateData = { ...request.body };
-    
-    // Recalculate nextDue if frequency or timing fields changed
+
     const payment = await RecurringPayment.findById(id);
     if (!payment) {
       return reply.status(404).send({ error: 'Recurring payment not found' });
     }
-    
+
+    // Recalculate nextDue if timing fields changed
+    const timingChanged = ['frequency', 'dayOfMonth', 'dayOfWeek', 'monthOfYear']
+      .some(f => updateData[f] !== undefined && String(updateData[f]) !== String(payment[f]));
+
+    if (timingChanged) {
+      const frequency = updateData.frequency || payment.frequency;
+      const dayOfMonth = updateData.dayOfMonth ?? payment.dayOfMonth;
+      const dayOfWeek = updateData.dayOfWeek ?? payment.dayOfWeek;
+      const monthOfYear = updateData.monthOfYear ?? payment.monthOfYear;
+      const now = new Date();
+      let nextDue;
+
+      if (frequency === 'monthly' || frequency === 'quarterly') {
+        nextDue = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+        if (nextDue <= now) {
+          const step = frequency === 'quarterly' ? 3 : 1;
+          nextDue.setMonth(nextDue.getMonth() + step);
+        }
+      } else if (frequency === 'weekly') {
+        nextDue = new Date(now);
+        const diff = (dayOfWeek - now.getDay() + 7) % 7 || 7;
+        nextDue.setDate(now.getDate() + diff);
+      } else if (frequency === 'yearly') {
+        nextDue = new Date(now.getFullYear(), monthOfYear - 1, dayOfMonth);
+        if (nextDue <= now) nextDue.setFullYear(nextDue.getFullYear() + 1);
+      }
+
+      if (nextDue) updateData.nextDue = nextDue;
+    }
+
     const updatedPayment = await RecurringPayment.findByIdAndUpdate(
       id,
       updateData,
       { new: true, runValidators: true }
     ).populate('category');
-    
+
     reply.send(updatedPayment);
   } catch (err) {
     reply.status(500).send({ error: err.message });

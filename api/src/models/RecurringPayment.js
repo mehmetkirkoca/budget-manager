@@ -118,22 +118,25 @@ recurringPaymentSchema.index({ category: 1 });
 recurringPaymentSchema.methods.calculateNextDue = function() {
   const current = this.nextDue || this.startDate;
   let nextDue = new Date(current);
-  
+
   switch (this.frequency) {
     case 'weekly':
       nextDue.setDate(nextDue.getDate() + 7);
       break;
     case 'monthly':
       nextDue.setMonth(nextDue.getMonth() + 1);
+      if (this.dayOfMonth) nextDue.setDate(this.dayOfMonth);
       break;
     case 'quarterly':
       nextDue.setMonth(nextDue.getMonth() + 3);
+      if (this.dayOfMonth) nextDue.setDate(this.dayOfMonth);
       break;
     case 'yearly':
       nextDue.setFullYear(nextDue.getFullYear() + 1);
+      if (this.dayOfMonth) nextDue.setDate(this.dayOfMonth);
       break;
   }
-  
+
   return nextDue;
 };
 

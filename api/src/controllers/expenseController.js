@@ -2,8 +2,14 @@ const Expense = require('../models/Expense');
 
 const getAllExpenses = async (request, reply) => {
   try {
-    const { page = 1, limit = 25, status } = request.query;
-    const query = status ? { status } : {};
+    const { page = 1, limit = 25, status, startDate, endDate } = request.query;
+    const query = {};
+    if (status) query.status = status;
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate)   query.date.$lte = new Date(endDate);
+    }
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [expenses, total] = await Promise.all([
       Expense.find(query).populate('category', 'name').sort({ date: 1 }).skip(skip).limit(parseInt(limit)),

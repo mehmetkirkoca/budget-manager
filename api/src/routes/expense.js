@@ -20,7 +20,9 @@ const getExpensesSchema = {
     properties: {
       page: { type: 'integer', minimum: 1, default: 1 },
       limit: { type: 'integer', minimum: 1, maximum: 100, default: 25 },
-      status: { type: 'string', enum: ['pending', 'completed'] }
+      status: { type: 'string', enum: ['pending', 'completed'] },
+      startDate: { type: 'string' },
+      endDate: { type: 'string' }
     }
   }
 };

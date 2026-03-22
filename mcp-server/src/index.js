@@ -125,12 +125,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: 'number',
               description: 'Hedef değer (opsiyonel)',
             },
+            unit: {
+              type: 'string',
+              description: 'Birim (gr, adet, vb.) - opsiyonel',
+            },
             currency: {
               type: 'string',
               description: 'Para birimi (TRY, USD, EUR, vb.)',
             },
           },
-          required: ['name', 'type', 'currentValue', 'currency'],
+          required: ['name', 'type', 'targetValue'],
         },
       },
       {
@@ -486,9 +490,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const assetData = {
           name: args.name,
           type: args.type,
-          currentValue: args.currentValue,
-          targetValue: args.targetValue,
-          currency: args.currency,
+          currentAmount: args.currentValue ?? 0,
+          targetAmount: args.targetValue,
+          unit: args.unit,
         };
 
         const response = await api.post('/assets', assetData);
@@ -565,7 +569,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'update_asset': {
-        const { id, ...updateData } = args;
+        const { id, currentValue, targetValue, currency, ...rest } = args;
+        const updateData = { ...rest };
+        if (currentValue !== undefined) updateData.currentAmount = currentValue;
+        if (targetValue !== undefined) updateData.targetAmount = targetValue;
         const response = await api.put(`/assets/${id}`, updateData);
 
         return {

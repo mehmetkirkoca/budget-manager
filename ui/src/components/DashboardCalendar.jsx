@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getUpcomingPayments } from '../services/recurringPaymentService';
 import { creditCardService } from '../services/creditCardService';
+import { getExpensesByDateRange } from '../services/expenseService';
 import { useTranslation } from 'react-i18next';
 import { FiCalendar, FiChevronLeft, FiChevronRight, FiGrid, FiList } from 'react-icons/fi';
 
@@ -22,6 +23,7 @@ const Tooltip = ({ payment, anchorRef }) => {
   }, [anchorRef]);
 
   const isCC = payment._ccType === 'card_payment';
+  const isExpense = !!payment._expenseType;
   const fmt = (v) => Number(v).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
 
   return (
@@ -42,6 +44,16 @@ const Tooltip = ({ payment, anchorRef }) => {
             <span className="text-red-300 font-medium">{fmt(payment.totalAmount)}</span>
           </div>
         </>
+      ) : isExpense ? (
+        <>
+          <div className="flex justify-between gap-4">
+            <span className="text-gray-400">Tutar</span>
+            <span className="text-yellow-300 font-medium">{fmt(payment.amount)}</span>
+          </div>
+          <div className="text-gray-500 mt-1 border-t border-gray-700 pt-1">
+            {payment._expenseType === 'pending' ? 'Bekliyor' : 'Tamamlandı'}
+          </div>
+        </>
       ) : (
         <div className="flex justify-between gap-4">
           <span className="text-gray-400">Tutar</span>
@@ -58,6 +70,8 @@ const Tooltip = ({ payment, anchorRef }) => {
 const getPaymentColors = (payment) => {
   if (payment._ccType === 'card_payment') return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
   if (payment._ccType === 'installment_payment') return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+  if (payment._expenseType === 'pending') return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
+  if (payment._expenseType === 'completed') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
   if (payment.amountInfo?.isDynamic) return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
   return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
 };
@@ -65,6 +79,8 @@ const getPaymentColors = (payment) => {
 const getDotColor = (payment) => {
   if (payment._ccType === 'card_payment') return 'bg-blue-500';
   if (payment._ccType === 'installment_payment') return 'bg-purple-500';
+  if (payment._expenseType === 'pending') return 'bg-amber-400';
+  if (payment._expenseType === 'completed') return 'bg-green-500';
   if (payment.amountInfo?.isDynamic) return 'bg-orange-400';
   return 'bg-red-400';
 };
@@ -109,42 +125,66 @@ const DashboardCalendar = () => {
   const [viewMode, setViewMode] = useState('monthly');
   const [currentWeek, setCurrentWeek] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(0);
+  const loadedMonths = useRef(new Set());
 
-  useEffect(() => {
-    setLoading(true);
+  const fetchMonth = useCallback(async (monthOffset) => {
     const now = new Date();
-    const end = new Date();
-    end.setDate(end.getDate() + 90);
+    const monthStart = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0, 23, 59, 59);
+    const key = `${monthStart.getFullYear()}-${monthStart.getMonth()}`;
 
-    // Fetch CC payment calendar for current month + next 2 months
-    const ccFetches = [0, 1, 2].map(offset => {
-      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-      return creditCardService.getPaymentCalendar(d.getMonth() + 1, d.getFullYear());
-    });
+    if (loadedMonths.current.has(key)) return;
 
-    Promise.all([
-      getUpcomingPayments(now.toISOString(), end.toISOString()),
-      ...ccFetches
-    ])
-      .then(([recurring, ...ccMonths]) => {
-        // Normalize CC items to same shape as recurring payments
-        const ccItems = ccMonths.flat().filter(item => item.type === 'card_payment').map(item => ({
-          _id: `cc_${item.cardInfo?.id}_${item.date}`,
-          name: item.title,
-          nextDue: item.date,
-          amount: item.amount,
-          effectiveAmount: item.amount,
-          totalAmount: item.totalAmount,
-          category: { name: 'Kredi Kartı Ödemesi' },
-          amountInfo: { isDynamic: false },
-          _ccType: item.type,
-          _cardInfo: item.cardInfo,
-        }));
-        setPayments([...recurring, ...ccItems]);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    setLoading(true);
+    try {
+      const [recurring, ccData, expenses] = await Promise.all([
+        getUpcomingPayments(monthStart.toISOString(), monthEnd.toISOString()),
+        creditCardService.getPaymentCalendar(monthStart.getMonth() + 1, monthStart.getFullYear()),
+        getExpensesByDateRange(monthStart.toISOString(), monthEnd.toISOString()),
+      ]);
+
+      const ccItems = (ccData || []).filter(item => item.type === 'card_payment').map(item => ({
+        _id: `cc_${item.cardInfo?.id}_${item.date}`,
+        name: item.title,
+        nextDue: item.date,
+        amount: item.amount,
+        effectiveAmount: item.amount,
+        totalAmount: item.totalAmount,
+        category: { name: 'Kredi Kartı Ödemesi' },
+        amountInfo: { isDynamic: false },
+        _ccType: item.type,
+        _cardInfo: item.cardInfo,
+      }));
+
+      const expenseItems = (expenses || []).map(e => ({
+        _id: `exp_${e._id}`,
+        name: e.description,
+        nextDue: e.date,
+        amount: e.amount,
+        effectiveAmount: e.amount,
+        category: e.category,
+        amountInfo: { isDynamic: false },
+        _expenseType: e.status,
+      }));
+
+      const newItems = [...recurring, ...ccItems, ...expenseItems];
+      setPayments(prev => {
+        const existingIds = new Set(prev.map(p => p._id));
+        return [...prev, ...newItems.filter(p => !existingIds.has(p._id))];
+      });
+      loadedMonths.current.add(key);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // İlk ay mount'ta yüklenir
+  useEffect(() => { fetchMonth(0); }, [fetchMonth]);
+
+  // Diğer aylar ok'a basınca yüklenir
+  useEffect(() => { fetchMonth(currentMonth); }, [currentMonth, fetchMonth]);
 
   const getPaymentsForDate = (date) => {
     const dateStr = date.toDateString();
@@ -296,6 +336,27 @@ const DashboardCalendar = () => {
               );
             })}
           </div>
+          {/* Aylık Toplam */}
+          {(() => {
+            const today = new Date();
+            const displayedYear = today.getFullYear();
+            const displayedMonth = (today.getMonth() + currentMonth + 12) % 12;
+            const displayedFullYear = today.getFullYear() + Math.floor((today.getMonth() + currentMonth) / 12);
+            const monthPayments = payments.filter(p => {
+              const d = new Date(p.nextDue);
+              return d.getFullYear() === displayedFullYear && d.getMonth() === displayedMonth;
+            });
+            const monthTotal = monthPayments.reduce((sum, p) => sum + (p.effectiveAmount || p.amount || 0), 0);
+            return (
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Bu ay toplam ödeme</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  {monthTotal.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+                  <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">({monthPayments.length} kalem)</span>
+                </span>
+              </div>
+            );
+          })()}
         </>
       )}
     </div>

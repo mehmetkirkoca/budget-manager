@@ -71,6 +71,22 @@ export const getExpensesByCategory = async (month) => {
   }
 };
 
+// GET expenses by date range (for calendar)
+export const getExpensesByDateRange = async (startDate, endDate) => {
+  try {
+    const params = new URLSearchParams({ limit: 100 });
+    if (startDate) params.append('startDate', startDate);
+    if (endDate)   params.append('endDate', endDate);
+    const response = await fetch(`${API_BASE_URL}/expenses?${params}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    return data.expenses;
+  } catch (error) {
+    console.error('Error fetching expenses by date range:', error);
+    throw error;
+  }
+};
+
 // DELETE expense
 export const deleteExpense = async (id) => {
   try {

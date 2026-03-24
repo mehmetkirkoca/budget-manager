@@ -377,7 +377,16 @@ const resources = {
       'color.red': 'Red',
       'color.purple': 'Purple',
       'color.gray': 'Gray',
-      emptyColumn: 'Empty column'
+      emptyColumn: 'Empty column',
+
+      // DateRangePicker
+      drpDays: 'Mon_Tue_Wed_Thu_Fri_Sat_Sun',
+      drpMonths: 'January_February_March_April_May_June_July_August_September_October_November_December',
+      drpSelectEnd: 'select end',
+      drpThisMonth: 'This month',
+      drpLastMonth: 'Last month',
+      drpLast3Months: 'Last 3 months',
+      drpThisYear: 'This year',
     }
   },
   tr: {
@@ -754,7 +763,16 @@ const resources = {
       'color.red': 'Kırmızı',
       'color.purple': 'Mor',
       'color.gray': 'Gri',
-      emptyColumn: 'Boş sütun'
+      emptyColumn: 'Boş sütun',
+
+      // DateRangePicker
+      drpDays: 'Pt_Sa_Ça_Pe_Cu_Ct_Pz',
+      drpMonths: 'Ocak_Şubat_Mart_Nisan_Mayıs_Haziran_Temmuz_Ağustos_Eylül_Ekim_Kasım_Aralık',
+      drpSelectEnd: 'bitiş seçin',
+      drpThisMonth: 'Bu ay',
+      drpLastMonth: 'Geçen ay',
+      drpLast3Months: 'Son 3 ay',
+      drpThisYear: 'Bu yıl',
     }
   }
 };

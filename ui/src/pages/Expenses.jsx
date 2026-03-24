@@ -8,8 +8,17 @@ import { getAllExpenses, createExpense, updateExpense, deleteExpense } from '../
 import { getAllCategories } from '../services/categoryService';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
+import DateRangePicker from '../components/DateRangePicker';
 
 const PAGE_SIZE = 25;
+
+const getMonthRange = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  return { start: fmt(start), end: fmt(end) };
+};
 
 const Expenses = () => {
   const { t } = useTranslation();
@@ -20,24 +29,27 @@ const Expenses = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const { start: defaultStart, end: defaultEnd } = getMonthRange();
+  const [startDate, setStartDate] = useState(defaultStart);
+  const [endDate, setEndDate] = useState(defaultEnd);
 
   useEffect(() => {
     document.title = `${t('expenses')} - ${t('appTitle')}`;
   }, [t]);
 
   useEffect(() => {
-    fetchData(currentPage, statusFilter);
-  }, [currentPage, statusFilter]);
+    fetchData(currentPage, statusFilter, startDate, endDate);
+  }, [currentPage, statusFilter, startDate, endDate]);
 
   useEffect(() => {
     getAllCategories().then(setCategories).catch(console.error);
   }, []);
 
-  const fetchData = async (page, status) => {
+  const fetchData = async (page, status, start, end) => {
     try {
       setLoading(true);
-      const data = await getAllExpenses(page, PAGE_SIZE, status);
+      const data = await getAllExpenses(page, PAGE_SIZE, status, start, end);
       setExpenses(data.expenses);
       setPagination(data.pagination);
     } catch (error) {
@@ -77,7 +89,7 @@ const Expenses = () => {
         if (targetPage !== currentPage) {
           setCurrentPage(targetPage);
         } else {
-          fetchData(currentPage);
+          fetchData(currentPage, statusFilter, startDate, endDate);
         }
       } catch (error) {
         console.error('Failed to delete expense:', error);
@@ -99,7 +111,7 @@ const Expenses = () => {
         await createExpense(expenseData);
       }
       handleModalClose();
-      fetchData(currentPage);
+      fetchData(currentPage, statusFilter, startDate, endDate);
     } catch (error) {
       console.error('Failed to save expense:', error);
       alert('Failed to save expense');
@@ -176,24 +188,33 @@ const Expenses = () => {
         </button>
       </div>
 
-      <div className="flex space-x-2 mb-6">
-        {['pending', 'completed', 'all'].map((s) => (
-          <button
-            key={s}
-            onClick={() => { setStatusFilter(s); setCurrentPage(1); }}
-            className={`px-4 py-1.5 text-sm font-medium rounded-full border transition-colors ${
-              statusFilter === s
-                ? s === 'pending'
-                  ? 'bg-yellow-100 border-yellow-400 text-yellow-800'
-                  : s === 'completed'
-                  ? 'bg-green-100 border-green-400 text-green-800'
-                  : 'bg-blue-100 border-blue-400 text-blue-800'
-                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            {s === 'pending' ? t('pending') : s === 'completed' ? t('completed') : t('all')}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onChange={({ startDate: s, endDate: e }) => { setStartDate(s); setEndDate(e); setCurrentPage(1); }}
+        />
+
+        {/* Status filter */}
+        <div className="flex space-x-2">
+          {['pending', 'completed', 'all'].map((s) => (
+            <button
+              key={s}
+              onClick={() => { setStatusFilter(s); setCurrentPage(1); }}
+              className={`px-4 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+                statusFilter === s
+                  ? s === 'pending'
+                    ? 'bg-yellow-100 border-yellow-400 text-yellow-800'
+                    : s === 'completed'
+                    ? 'bg-green-100 border-green-400 text-green-800'
+                    : 'bg-blue-100 border-blue-400 text-blue-800'
+                  : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+              }`}
+            >
+              {s === 'pending' ? t('pending') : s === 'completed' ? t('completed') : t('all')}
+            </button>
+          ))}
+        </div>
       </div>
 
       {expenses.length === 0 ? (

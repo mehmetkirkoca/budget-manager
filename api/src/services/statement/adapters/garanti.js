@@ -27,7 +27,8 @@ module.exports.name = 'garanti';
 
 module.exports.detect = (text) =>
   text.includes('T. Garanti Bankası') ||
-  (text.includes('Garanti BBVA') && text.includes('Dönem Borcunuz'));
+  (text.includes('Garanti BBVA') && text.includes('Dönem Borcunuz')) ||
+  (text.includes('Dönem Borcunuz') && text.includes('Hesap Kesim Tarihi') && text.includes('Min. Ödeme Tutarı'));
 
 module.exports.parse = (text) => {
   // --- Header fields ---

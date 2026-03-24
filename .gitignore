@@ -56,6 +56,10 @@ dist-ssr
 # Claude Code local settings
 .claude/settings.local.json
 
+# AI assistant context files (may contain personal notes)
+CLAUDE.md
+gemini.md
+
 # MCP server environment variables
 mcp-server/.env
 

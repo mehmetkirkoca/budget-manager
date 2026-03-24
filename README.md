@@ -231,4 +231,4 @@ Once Claude Code is running inside this project, you can ask things like:
 
 ## License
 
-This project is licensed under the ISC License.
+This project is licensed under the [MIT License](LICENSE).

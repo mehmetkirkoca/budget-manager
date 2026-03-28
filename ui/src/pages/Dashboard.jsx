@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import SummaryCard from '../components/SummaryCard';
@@ -61,6 +61,13 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [t]);
 
+  const handleCurrentMonthTotal = useCallback((total) => {
+    setSummaryData(prev => {
+      if (prev.monthlyExpenses === total) return prev;
+      return { ...prev, monthlyExpenses: total };
+    });
+  }, []);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -113,7 +120,10 @@ const Dashboard = () => {
       case 'calendar':
         return (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-            <DashboardCalendar monthlyIncome={summaryData.monthlyIncome} />
+            <DashboardCalendar
+              monthlyIncome={summaryData.monthlyIncome}
+              onCurrentMonthTotal={handleCurrentMonthTotal}
+            />
           </div>
         );
       case 'auto-process':

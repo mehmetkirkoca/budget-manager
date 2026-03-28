@@ -119,7 +119,7 @@ const WeekPaymentDot = ({ payment }) => {
   );
 };
 
-const DashboardCalendar = ({ monthlyIncome = 0 }) => {
+const DashboardCalendar = ({ monthlyIncome = 0, onCurrentMonthTotal }) => {
   const { t } = useTranslation();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -186,6 +186,21 @@ const DashboardCalendar = ({ monthlyIncome = 0 }) => {
 
   // Diğer aylar ok'a basınca yüklenir
   useEffect(() => { fetchMonth(currentMonth); }, [currentMonth, fetchMonth]);
+
+  // Mevcut ayın toplamını üst bileşene bildir
+  useEffect(() => {
+    if (!onCurrentMonthTotal) return;
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const total = payments
+      .filter(p => {
+        const d = new Date(p.nextDue);
+        return d.getFullYear() === year && d.getMonth() === month;
+      })
+      .reduce((sum, p) => sum + (p.effectiveAmount || p.amount || 0), 0);
+    onCurrentMonthTotal(total);
+  }, [payments, onCurrentMonthTotal]);
 
   const getPaymentsForDate = (date) => {
     const dateStr = date.toDateString();

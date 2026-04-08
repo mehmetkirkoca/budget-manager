@@ -372,6 +372,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: 'get_upcoming_payments',
+        description: 'Yaklaşan tüm ödemeleri listeler: kredi kartı ekstre ödemeleri, taksitler ve tekrarlayan ödemeler. Takvime etkinlik eklemek için idealdir.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            days: {
+              type: 'number',
+              description: 'Kaç günlük ödeme takvimi gösterilsin (varsayılan: 30)',
+            },
+          },
+        },
+      },
+      {
         name: 'calculate_credit_card_interest',
         description: 'Kredi kartı faiz simülasyonu yapar. Ödeme tutarına göre akdi faiz ve gecikme faizini 4 senaryo karşılaştırmasıyla gösterir.',
         inputSchema: {
@@ -672,6 +685,104 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: `ID: ${args.id} olan not başarıyla silindi.`,
             },
           ],
+        };
+      }
+
+      case 'get_upcoming_payments': {
+        const days = args.days || 30;
+
+        const [cardsRes, installmentsRes, recurringRes] = await Promise.all([
+          api.get('/credit-cards'),
+          api.get(`/credit-card-installments/upcoming?days=${days}`),
+          api.get(`/recurring-payments/upcoming?days=${days}`),
+        ]);
+
+        const cards = cardsRes.data || [];
+        const installments = Array.isArray(installmentsRes.data) ? installmentsRes.data : [];
+        const recurring = Array.isArray(recurringRes.data) ? recurringRes.data : [];
+
+        const now = new Date();
+        const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+        // Kredi kartı ekstre ödemeleri
+        const cardPayments = cards
+          .filter(c => c.nextPaymentDue && new Date(c.nextPaymentDue) <= until)
+          .map(c => ({
+            type: 'credit_card',
+            title: `${c.bankName} ${c.name}`,
+            cardNumber: c.cardNumber,
+            amount: c.currentBalance || 0,
+            minimumPayment: c.minimumPaymentAmount || 0,
+            dueDate: c.nextPaymentDue,
+            cardId: c._id,
+          }))
+          .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+        // Taksit ödemeleri
+        const installmentPayments = installments.map(i => ({
+          type: 'installment',
+          title: i.description || i.name || 'Taksit Ödemesi',
+          amount: i.installmentAmount || i.amount || 0,
+          dueDate: i.nextPaymentDate || i.dueDate,
+          cardName: i.cardName || '',
+          remaining: i.remainingInstallments || null,
+        })).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+        // Tekrarlayan ödemeler
+        const recurringPayments = recurring.map(r => ({
+          type: 'recurring',
+          title: r.name || r.description || 'Tekrarlayan Ödeme',
+          amount: r.calculatedAmount || r.amount || 0,
+          dueDate: r.nextDue,
+          frequency: r.frequency || '',
+        })).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+        const allPayments = [...cardPayments, ...installmentPayments, ...recurringPayments]
+          .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+        const lines = [`Yaklaşan Ödemeler (${days} gün, toplam ${allPayments.length} ödeme):\n`];
+
+        if (cardPayments.length > 0) {
+          lines.push('=== KREDİ KARTI EKSTRE ÖDEMELERİ ===');
+          for (const p of cardPayments) {
+            lines.push(`  • ${p.title} (****${p.cardNumber})`);
+            lines.push(`    Tarih         : ${formatDate(p.dueDate)}`);
+            lines.push(`    Toplam Borç   : ${formatCurrency(p.amount)}`);
+            lines.push(`    Asgari Ödeme  : ${formatCurrency(p.minimumPayment)}`);
+            lines.push(`    Kart ID       : ${p.cardId}`);
+            lines.push('');
+          }
+        }
+
+        if (installmentPayments.length > 0) {
+          lines.push('=== TAKSİT ÖDEMELERİ ===');
+          for (const p of installmentPayments) {
+            lines.push(`  • ${p.title}${p.cardName ? ` (${p.cardName})` : ''}`);
+            lines.push(`    Tarih    : ${p.dueDate ? formatDate(p.dueDate) : 'Belirsiz'}`);
+            lines.push(`    Tutar    : ${formatCurrency(p.amount)}`);
+            if (p.remaining) lines.push(`    Kalan    : ${p.remaining} taksit`);
+            lines.push('');
+          }
+        }
+
+        if (recurringPayments.length > 0) {
+          lines.push('=== TEKRARLAYAN ÖDEMELER ===');
+          for (const p of recurringPayments) {
+            lines.push(`  • ${p.title}`);
+            lines.push(`    Tarih    : ${p.dueDate ? formatDate(p.dueDate) : 'Belirsiz'}`);
+            lines.push(`    Tutar    : ${formatCurrency(p.amount)}`);
+            if (p.frequency) lines.push(`    Sıklık   : ${p.frequency}`);
+            lines.push('');
+          }
+        }
+
+        if (allPayments.length === 0) {
+          lines.push(`Önümüzdeki ${days} günde yaklaşan ödeme bulunmadı.`);
+        }
+
+        return {
+          content: [{ type: 'text', text: lines.join('\n') }],
+          _structured: allPayments,
         };
       }
 

@@ -307,6 +307,17 @@ const resources = {
       karat24: '24 Karat (Fine Gold)',
       addCard: 'Add Card',
       manageCards: 'Manage Cards',
+
+      // Statement Analysis
+      statementAnalysis: 'Statement Analysis',
+      totalMonthlyInstallments: 'Total Monthly Burden',
+      activeInstallmentCount: 'Active Installments',
+      avgMonthlySpending: 'Avg. per Installment',
+      categoryBreakdown: 'Category Breakdown',
+      uncategorized: 'Uncategorized',
+      remaining: 'Remaining',
+      items: 'items',
+      allCategories: 'All',
       
       // Export translations
       dataExport: 'Data Export',
@@ -693,6 +704,17 @@ const resources = {
       karat24: '24 Ayar (Has)',
       addCard: 'Kart Ekle',
       manageCards: 'Kartları Yönet',
+
+      // Statement Analysis
+      statementAnalysis: 'Ekstre Analizi',
+      totalMonthlyInstallments: 'Aylık Toplam Taksit',
+      activeInstallmentCount: 'Aktif Taksit',
+      avgMonthlySpending: 'Taksit Başına Ort.',
+      categoryBreakdown: 'Kategori Dağılımı',
+      uncategorized: 'Kategorisiz',
+      remaining: 'Kalan',
+      items: 'kalem',
+      allCategories: 'Tümü',
       
       // Export translations
       dataExport: 'Veri Dışa Aktarma',

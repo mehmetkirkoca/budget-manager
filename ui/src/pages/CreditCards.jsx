@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiPlus, FiCreditCard, FiBarChart, FiCalendar, FiAlertCircle, FiTrash, FiUpload, FiDollarSign } from 'react-icons/fi';
+import { FiPlus, FiCreditCard, FiBarChart, FiCalendar, FiAlertCircle, FiTrash, FiUpload, FiDollarSign, FiPieChart } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { creditCardService, creditCardUtils } from '../services/creditCardService';
 import Modal from '../components/Modal';
 import InstallmentForm from '../components/InstallmentForm';
 import CreditCardForm from '../components/CreditCardForm';
 import StatementUploadModal from '../components/StatementUploadModal';
+import StatementAnalysisModal from '../components/StatementAnalysisModal';
 
 const CreditCards = () => {
   const { t } = useTranslation();
@@ -21,6 +22,7 @@ const CreditCards = () => {
   const [editingCard, setEditingCard] = useState(null);
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [statementCardId, setStatementCardId] = useState(null);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
 
   useEffect(() => {
     document.title = `${t('creditCards')} - ${t('appTitle')}`;
@@ -137,6 +139,13 @@ const CreditCards = () => {
         </div>
         
         <div className="flex space-x-3">
+          <button
+            onClick={() => setShowAnalysisModal(true)}
+            className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors flex items-center"
+          >
+            <FiPieChart className="mr-2" />
+            {t('statementAnalysis')}
+          </button>
           <Link
             to="/credit-cards/payment"
             className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center"
@@ -290,6 +299,16 @@ const CreditCards = () => {
           onSave={handleCreditCardSave}
           onCancel={handleCreditCardCancel}
         />
+      </Modal>
+
+      {/* Statement Analysis Modal */}
+      <Modal
+        isOpen={showAnalysisModal}
+        onClose={() => setShowAnalysisModal(false)}
+        title={t('statementAnalysis')}
+        size="xl"
+      >
+        <StatementAnalysisModal onClose={() => setShowAnalysisModal(false)} />
       </Modal>
 
       {/* Statement Upload Modal */}

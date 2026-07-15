@@ -81,11 +81,15 @@ module.exports.parse = (text) => {
   const stmtDateMatch = text.match(/ÈU¢Qa[^\n]*ÒU¢Y\^[^\n]*\n([ðñòóôõö÷øù]{2}=[ðñòóôõö÷øù]{2}=[ðñòóôõö÷øù]{4})/);
   // First "Son Ödeme Tarihi" = current period due date (not the Bireysel/next-period one)
   const dueDateMatch  = text.match(/â`_[^\n]*ìTU\^U[^\n]*\n([ðñòóôõö÷øù]{2}=[ðñòóôõö÷øù]{2}=[ðñòóôõö÷øù]{4})/);
+  const totalLimitMatch = text.match(/^ÒQc£[^\n]*ÓY\^Y£Y[^\n]*\n([ðñòóôõö÷øùk]+K[ðñòóôõö÷øù]+)/m);
+  const availLimitMatch = text.match(/^Ò¤]]Q_§]QRY]Yc[^\n]*ÒQc£[^\n]*ÓY\^Y£Y[^\n]*\n([ðñòóôõö÷øùk]+K[ðñòóôõö÷øù]+)/m);
 
   const totalDebt      = debtMatch     ? parseTR(debtMatch[1])        : null;
   const minPayment     = minPayMatch   ? parseTR(minPayMatch[1])      : null;
   const statementDate  = stmtDateMatch ? decodeDate(stmtDateMatch[1]) : null;
   const paymentDueDate = dueDateMatch  ? decodeDate(dueDateMatch[1])  : null;
+  const totalLimit     = totalLimitMatch ? parseTR(totalLimitMatch[1]) : null;
+  const availableLimit = availLimitMatch ? parseTR(availLimitMatch[1]) : null;
 
   // Transactions: two-line format
   //   Line 1: DATE (DD=MM=YYYY) immediately followed by description
@@ -118,5 +122,5 @@ module.exports.parse = (text) => {
     });
   }
 
-  return { statementDate, paymentDueDate, totalDebt, minPayment, transactions };
+  return { statementDate, paymentDueDate, totalDebt, minPayment, totalLimit, availableLimit, transactions };
 };

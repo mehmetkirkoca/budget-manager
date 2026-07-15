@@ -56,19 +56,15 @@ const importStatement = async (request, reply) => {
   const card = await CreditCard.findById(id);
   if (!card) return reply.status(404).send({ error: 'Credit card not found' });
 
-  // Update card fields from statement
-  if (totalDebt != null) {
-    card.currentBalance = totalDebt;
-    // Prefer availableLimit directly from the statement; fall back to totalLimit - totalDebt
-    if (availableLimit != null) {
-      card.availableLimit = availableLimit;
-    } else if (totalLimit != null) {
-      card.availableLimit = totalLimit - totalDebt;
-    } else {
-      card.availableLimit = card.totalLimit - totalDebt;
-    }
-  }
   if (totalLimit != null) card.totalLimit = totalLimit;
+  // Update card fields from statement. Prefer the statement's available limit;
+  // some banks include pending transactions that are not part of statement debt.
+  if (totalDebt != null) card.currentBalance = totalDebt;
+  if (availableLimit != null) {
+    card.availableLimit = availableLimit;
+  } else if (totalDebt != null) {
+    card.availableLimit = card.totalLimit - totalDebt;
+  }
   if (minPayment     != null) card.minimumPaymentAmount = minPayment;
   if (statementDate)          card.lastStatementDate    = new Date(statementDate);
   if (paymentDueDate)         card.nextPaymentDue       = new Date(paymentDueDate);

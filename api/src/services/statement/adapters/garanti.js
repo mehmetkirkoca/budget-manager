@@ -37,11 +37,15 @@ module.exports.parse = (text) => {
   const dueMatch   = text.match(new RegExp(`Son Ödeme Tarihi:?\\s*(\\d{2} (?:${MONTH_ALT}) \\d{4})`));
   const debtMatch  = text.match(/Dönem Borcunuz([\d.]+,\d{2})/);
   const minMatch   = text.match(/Min\. Ödeme Tutarı([\d.]+,\d{2})/);
+  const totalLimitMatch = text.match(/Kart Limiti\s*([\d.]+,\d{2})/i);
+  const availLimitMatch = text.match(/kullan[ıi]labilir limitiniz\s*([\d.]+,\d{2})/i);
 
   const statementDate  = stmtMatch ? parseDate(stmtMatch[1])  : null;
   const paymentDueDate = dueMatch  ? parseDate(dueMatch[1])   : null;
   const totalDebt      = debtMatch ? parseTR(debtMatch[1])    : null;
   const minPayment     = minMatch  ? parseTR(minMatch[1])     : null;
+  const totalLimit     = totalLimitMatch ? parseTR(totalLimitMatch[1]) : null;
+  const availableLimit = availLimitMatch ? parseTR(availLimitMatch[1]) : null;
 
   // --- Transactions ---
   // Her satır: DATE + açıklama + SPACE + [bonus (X,XX)] + tutar + [+]
@@ -72,5 +76,5 @@ module.exports.parse = (text) => {
     });
   }
 
-  return { statementDate, paymentDueDate, totalDebt, minPayment, transactions };
+  return { statementDate, paymentDueDate, totalDebt, minPayment, totalLimit, availableLimit, transactions };
 };

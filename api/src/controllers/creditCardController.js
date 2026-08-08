@@ -278,20 +278,18 @@ const updateCreditCardBalance = async (request, reply) => {
 const getPaymentCalendar = async (request, reply) => {
   try {
     const { month, year } = request.query;
-    const targetMonth = month ? parseInt(month) - 1 : new Date().getMonth();
-    const targetYear = year ? parseInt(year) : new Date().getFullYear();
+    const now = new Date();
+    const targetMonth = month ? parseInt(month) - 1 : now.getMonth();
+    const targetYear = year ? parseInt(year) : now.getFullYear();
     
     const startDate = new Date(targetYear, targetMonth, 1);
-    const endDate = new Date(targetYear, targetMonth + 1, 0);
+    const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+    const lastDayOfMonth = endDate.getDate();
     
-    // Get credit card payments
-    const cardPayments = await CreditCard.find({
-      isActive: true,
-      nextPaymentDue: { $gte: startDate, $lte: endDate },
-      currentBalance: { $gt: 0 }
-    }).select('name bankName nextPaymentDue minimumPaymentAmount currentBalance');
+    // Get all active credit cards
+    const activeCards = await CreditCard.find({ isActive: true });
     
-    // Get installment payments
+    // Get installment payments for the period
     const installmentPayments = await CreditCardInstallment.find({
       paymentStatus: 'active',
       nextPaymentDate: { $gte: startDate, $lte: endDate }
@@ -301,14 +299,51 @@ const getPaymentCalendar = async (request, reply) => {
     
     const calendar = [];
     
-    // Add card payments
-    cardPayments.forEach(card => {
+    // Add card payments (using actual nextPaymentDue if in current month, or statementDay + 10 days for future months)
+    activeCards.forEach(card => {
+      let dueDate = null;
+      let isActual = false;
+      
+      if (card.nextPaymentDue) {
+        const dbDue = new Date(card.nextPaymentDue);
+        if (dbDue >= startDate && dbDue <= endDate) {
+          dueDate = dbDue;
+          isActual = true;
+        }
+      }
+      
+      if (!dueDate) {
+        // 10-day bank formula: statementDay + 10 days
+        const prevMonth = targetMonth === 0 ? 11 : targetMonth - 1;
+        const prevYear = targetMonth === 0 ? targetYear - 1 : targetYear;
+        const prevMonthLastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
+        const prevStDay = Math.min(card.statementDay || 24, prevMonthLastDay);
+        
+        const candidateDue = new Date(prevYear, prevMonth, prevStDay, 12, 0, 0);
+        candidateDue.setDate(candidateDue.getDate() + 10);
+        
+        if (candidateDue >= startDate && candidateDue <= endDate) {
+          dueDate = candidateDue;
+        } else {
+          // If statement is early in target month, check targetMonth's statement + 10 days
+          const curStDay = Math.min(card.statementDay || 24, lastDayOfMonth);
+          const candidateDueCur = new Date(targetYear, targetMonth, curStDay, 12, 0, 0);
+          candidateDueCur.setDate(candidateDueCur.getDate() + 10);
+          if (candidateDueCur >= startDate && candidateDueCur <= endDate) {
+            dueDate = candidateDueCur;
+          } else {
+            dueDate = candidateDue;
+          }
+        }
+      }
+      
       calendar.push({
         type: 'card_payment',
-        date: card.nextPaymentDue,
+        date: dueDate,
         title: `${card.bankName} ${card.name}`,
-        amount: card.minimumPaymentAmount,
-        totalAmount: card.currentBalance,
+        amount: isActual ? (card.minimumPaymentAmount || 0) : 0,
+        totalAmount: isActual ? (card.currentBalance || 0) : 0,
+        isUnbilled: !isActual,
         cardInfo: {
           id: card._id,
           name: card.name,
@@ -319,6 +354,7 @@ const getPaymentCalendar = async (request, reply) => {
     
     // Add installment payments
     installmentPayments.forEach(installment => {
+      if (!installment.creditCard) return;
       calendar.push({
         type: 'installment_payment',
         date: installment.nextPaymentDate,

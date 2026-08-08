@@ -13,6 +13,7 @@ import CreditCardCalendar from './pages/CreditCardCalendar';
 import Export from './pages/Export';
 import ImportData from './pages/ImportData';
 import Notes from './pages/Notes';
+import Analysis from './pages/Analysis';
 
 function App() {
   return (
@@ -29,6 +30,8 @@ function App() {
           <Route path="credit-cards/new" element={<CreditCardForm />} />
           <Route path="credit-cards/payment" element={<CreditCardPayment />} />
           <Route path="credit-cards/calendar" element={<CreditCardCalendar />} />
+          <Route path="analysis" element={<Analysis />} />
+          <Route path="analiz" element={<Analysis />} />
           <Route path="notes" element={<Notes />} />
           <Route path="export" element={<Export />} />
           <Route path="import" element={<ImportData />} />

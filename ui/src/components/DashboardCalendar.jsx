@@ -35,16 +35,20 @@ const Tooltip = ({ payment, anchorRef }) => {
     >
       <div className="font-semibold mb-1.5">{payment.name}</div>
       {isCC ? (
-        <>
-          <div className="flex justify-between gap-4">
-            <span className="text-gray-400">{t('minPayment')}</span>
-            <span className="text-yellow-300 font-medium">{fmt(payment.amount)}</span>
-          </div>
-          <div className="flex justify-between gap-4 mt-0.5">
-            <span className="text-gray-400">{t('totalDebt')}</span>
-            <span className="text-red-300 font-medium">{fmt(payment.totalAmount)}</span>
-          </div>
-        </>
+        payment.isUnbilled || (!payment.amount && !payment.totalAmount) ? (
+          <div className="text-gray-400 italic text-[11px]">Ekstre henüz kesilmedi</div>
+        ) : (
+          <>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-400">{t('minPayment')}</span>
+              <span className="text-yellow-300 font-medium">{fmt(payment.amount)}</span>
+            </div>
+            <div className="flex justify-between gap-4 mt-0.5">
+              <span className="text-gray-400">{t('totalDebt')}</span>
+              <span className="text-red-300 font-medium">{fmt(payment.totalAmount)}</span>
+            </div>
+          </>
+        )
       ) : isExpense ? (
         <>
           <div className="flex justify-between gap-4">
@@ -138,24 +142,111 @@ const DashboardCalendar = ({ monthlyIncome = 0, onCurrentMonthTotal }) => {
 
     setLoading(true);
     try {
-      const [recurring, ccData, expenses] = await Promise.all([
+      const [recurring, ccData, expenses, cardsData] = await Promise.all([
         getUpcomingPayments(monthStart.toISOString(), monthEnd.toISOString()),
-        creditCardService.getPaymentCalendar(monthStart.getMonth() + 1, monthStart.getFullYear()),
+        creditCardService.getPaymentCalendar(monthStart.getMonth() + 1, monthStart.getFullYear()).catch(() => []),
         getExpensesByDateRange(monthStart.toISOString(), monthEnd.toISOString()),
+        creditCardService.getAllCreditCards().catch(() => [])
       ]);
 
-      const ccItems = (ccData || []).filter(item => item.type === 'card_payment').map(item => ({
-        _id: `cc_${item.cardInfo?.id}_${item.date}`,
-        name: item.title,
-        nextDue: item.date,
-        amount: item.amount,
-        effectiveAmount: item.amount,
-        totalAmount: item.totalAmount,
-        category: { name: 'Kredi Kartı Ödemesi' },
-        amountInfo: { isDynamic: false },
-        _ccType: item.type,
-        _cardInfo: item.cardInfo,
-      }));
+      const ccItems = [];
+      const processedCardIds = new Set();
+
+      (ccData || []).filter(item => item.type === 'card_payment').forEach(item => {
+        const cardId = item.cardInfo?.id;
+        if (cardId) processedCardIds.add(String(cardId));
+        ccItems.push({
+          _id: `cc_${cardId || 'card'}_${item.date}`,
+          name: item.title,
+          nextDue: item.date,
+          amount: item.amount || 0,
+          effectiveAmount: item.amount || 0,
+          totalAmount: item.totalAmount || 0,
+          category: { name: 'Kredi Kartı Ödemesi' },
+          amountInfo: { isDynamic: false },
+          _ccType: item.type,
+          _cardInfo: item.cardInfo,
+        });
+      });
+
+      if (Array.isArray(cardsData) && cardsData.length > 0) {
+        const targetYear = monthStart.getFullYear();
+        const targetMonth = monthStart.getMonth();
+        const curMonthLastDay = monthEnd.getDate();
+
+        const prevMonth = targetMonth === 0 ? 11 : targetMonth - 1;
+        const prevYear = targetMonth === 0 ? targetYear - 1 : targetYear;
+        const prevMonthLastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
+
+        cardsData.forEach(card => {
+          if (card.isActive === false) return;
+          if (processedCardIds.has(String(card._id))) return;
+
+          let exactDue = null;
+          if (card.nextPaymentDue) {
+            const dbDue = new Date(card.nextPaymentDue);
+            if (dbDue >= monthStart && dbDue <= monthEnd) {
+              exactDue = dbDue;
+            }
+          }
+
+          if (exactDue) {
+            processedCardIds.add(String(card._id));
+            ccItems.push({
+              _id: `cc_${card._id}_${exactDue.toISOString()}`,
+              name: `${card.bankName} ${card.name}`,
+              nextDue: exactDue,
+              amount: card.minimumPaymentAmount || 0,
+              effectiveAmount: card.minimumPaymentAmount || 0,
+              totalAmount: card.currentBalance || 0,
+              category: { name: 'Kredi Kartı Ödemesi' },
+              amountInfo: { isDynamic: false },
+              _ccType: 'card_payment',
+              _cardInfo: {
+                id: card._id,
+                name: card.name,
+                bankName: card.bankName
+              }
+            });
+          } else {
+            const prevStDay = Math.min(card.statementDay || 24, prevMonthLastDay);
+            const dueA = new Date(prevYear, prevMonth, prevStDay, 12, 0, 0);
+            dueA.setDate(dueA.getDate() + 10);
+
+            let dueInMonth = null;
+            if (dueA.getMonth() === targetMonth && dueA.getFullYear() === targetYear) {
+              dueInMonth = dueA;
+            } else {
+              const curStDay = Math.min(card.statementDay || 24, curMonthLastDay);
+              const dueB = new Date(targetYear, targetMonth, curStDay, 12, 0, 0);
+              dueB.setDate(dueB.getDate() + 10);
+              if (dueB.getMonth() === targetMonth && dueB.getFullYear() === targetYear) {
+                dueInMonth = dueB;
+              }
+            }
+
+            if (dueInMonth) {
+              processedCardIds.add(String(card._id));
+              ccItems.push({
+                _id: `cc_${card._id}_${dueInMonth.toISOString()}`,
+                name: `${card.bankName} ${card.name}`,
+                nextDue: dueInMonth,
+                amount: 0,
+                effectiveAmount: 0,
+                totalAmount: 0,
+                category: { name: 'Kredi Kartı Ödemesi' },
+                amountInfo: { isDynamic: false },
+                _ccType: 'card_payment',
+                _cardInfo: {
+                  id: card._id,
+                  name: card.name,
+                  bankName: card.bankName
+                }
+              });
+            }
+          }
+        });
+      }
 
       const expenseItems = (expenses || []).map(e => ({
         _id: `exp_${e._id}`,

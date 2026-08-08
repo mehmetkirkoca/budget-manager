@@ -32,16 +32,20 @@ const Tooltip = ({ item, anchorRef }) => {
         <div className="text-gray-400 mb-1 text-xs">{item.cardInfo.bankName}</div>
       )}
       {item.type === 'card_payment' ? (
-        <>
-          <div className="flex justify-between gap-4">
-            <span className="text-gray-400">Min. Ödeme</span>
-            <span className="text-yellow-300 font-medium">{fmt(item.amount)}</span>
-          </div>
-          <div className="flex justify-between gap-4 mt-0.5">
-            <span className="text-gray-400">Toplam Borç</span>
-            <span className="text-red-300 font-medium">{fmt(item.totalAmount)}</span>
-          </div>
-        </>
+        item.isUnbilled || (!item.amount && !item.totalAmount) ? (
+          <div className="text-gray-400 italic text-[11px]">Ekstre henüz kesilmedi</div>
+        ) : (
+          <>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-400">Min. Ödeme</span>
+              <span className="text-yellow-300 font-medium">{fmt(item.amount)}</span>
+            </div>
+            <div className="flex justify-between gap-4 mt-0.5">
+              <span className="text-gray-400">Toplam Borç</span>
+              <span className="text-red-300 font-medium">{fmt(item.totalAmount)}</span>
+            </div>
+          </>
+        )
       ) : (
         <div className="flex justify-between gap-4">
           <span className="text-gray-400">Taksit Tutarı</span>
@@ -90,15 +94,111 @@ const CreditCardCalendar = () => {
 
   useEffect(() => {
     setLoading(true);
-    creditCardService.getPaymentCalendar(month, year)
-      .then(data => setItems(data))
+    Promise.all([
+      creditCardService.getPaymentCalendar(month, year).catch(() => []),
+      creditCardService.getAllCreditCards().catch(() => [])
+    ])
+      .then(([calData, cardsData]) => {
+        let finalItems = [];
+
+        // Include any installments from calData
+        if (Array.isArray(calData)) {
+          calData.forEach(item => {
+            if (item.type === 'installment_payment') {
+              finalItems.push(item);
+            }
+          });
+        }
+
+        if (Array.isArray(cardsData) && cardsData.length > 0) {
+          const startDate = new Date(year, month - 1, 1);
+          const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+          const curMonthLastDay = endDate.getDate();
+
+          const prevMonth = month === 1 ? 12 : month - 1;
+          const prevYear = month === 1 ? year - 1 : year;
+          const prevMonthLastDay = new Date(prevYear, prevMonth, 0).getDate();
+
+          cardsData.forEach(card => {
+            if (card.isActive === false) return;
+
+            // 1. Check if card has an actual nextPaymentDue in database matching this month
+            let exactDue = null;
+            if (card.nextPaymentDue) {
+              const dbDue = new Date(card.nextPaymentDue);
+              if (dbDue >= startDate && dbDue <= endDate) {
+                exactDue = dbDue;
+              }
+            }
+
+            if (exactDue) {
+              finalItems.push({
+                type: 'card_payment',
+                date: exactDue,
+                title: `${card.bankName} ${card.name}`,
+                amount: card.minimumPaymentAmount || 0,
+                totalAmount: card.currentBalance || 0,
+                isUnbilled: false,
+                cardInfo: {
+                  id: card._id,
+                  name: card.name,
+                  bankName: card.bankName
+                }
+              });
+            } else {
+              // 2. Calculate if previous month's statement cut-off falls in this month
+              const prevStDay = Math.min(card.statementDay || 24, prevMonthLastDay);
+              const dueA = new Date(prevYear, prevMonth - 1, prevStDay, 12, 0, 0);
+              dueA.setDate(dueA.getDate() + 10);
+
+              let dueInMonth = null;
+              if (dueA.getMonth() === month - 1 && dueA.getFullYear() === year) {
+                dueInMonth = dueA;
+              } else {
+                // 3. Calculate if current month's statement cut-off falls in this month
+                const curStDay = Math.min(card.statementDay || 24, curMonthLastDay);
+                const dueB = new Date(year, month - 1, curStDay, 12, 0, 0);
+                dueB.setDate(dueB.getDate() + 10);
+                if (dueB.getMonth() === month - 1 && dueB.getFullYear() === year) {
+                  dueInMonth = dueB;
+                }
+              }
+
+              if (dueInMonth) {
+                finalItems.push({
+                  type: 'card_payment',
+                  date: dueInMonth,
+                  title: `${card.bankName} ${card.name}`,
+                  amount: 0,
+                  totalAmount: 0,
+                  isUnbilled: true,
+                  cardInfo: {
+                    id: card._id,
+                    name: card.name,
+                    bankName: card.bankName
+                  }
+                });
+              }
+            }
+          });
+        }
+
+        setItems(finalItems);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [month, year]);
 
-  const getItemsForDate = (date) => {
-    const dateStr = date.toISOString().slice(0, 10);
-    return items.filter(item => item.date?.slice(0, 10) === dateStr);
+  const getItemsForDate = (cellDate) => {
+    return items.filter(item => {
+      if (!item.date) return false;
+      const itemDate = new Date(item.date);
+      return (
+        itemDate.getFullYear() === cellDate.getFullYear() &&
+        itemDate.getMonth() === cellDate.getMonth() &&
+        itemDate.getDate() === cellDate.getDate()
+      );
+    });
   };
 
   const getMonthDates = () => {

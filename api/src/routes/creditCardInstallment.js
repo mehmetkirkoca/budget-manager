@@ -24,7 +24,7 @@ async function creditCardInstallmentRoutes(fastify, options) {
             type: 'string', 
             enum: ['active', 'completed', 'paused', 'defaulted'] 
           },
-          limit: { type: 'integer', minimum: 1, maximum: 100, default: 50 },
+          limit: { type: 'integer', minimum: 1, maximum: 1000, default: 50 },
           page: { type: 'integer', minimum: 1, default: 1 }
         }
       }

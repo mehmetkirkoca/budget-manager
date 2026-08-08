@@ -26,11 +26,13 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     sm: 'max-w-sm',
     md: 'max-w-lg',
     lg: 'max-w-2xl', 
-    xl: 'max-w-4xl'
+    xl: 'max-w-4xl',
+    '2xl': 'max-w-6xl',
+    full: 'max-w-[96vw]'
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-16 px-4">
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-8 px-4">
       {/* Background overlay with subtle blur and dark tint */}
       <div 
         className="absolute inset-0 transition-all duration-300"
@@ -43,7 +45,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
       ></div>
 
       {/* Modal panel */}
-      <div className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-full ${sizeClasses[size]} max-h-[85vh] flex flex-col transform transition-all duration-300 ease-out`}>
+      <div className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 w-full ${sizeClasses[size]} ${size === 'full' ? 'max-h-[94vh]' : 'max-h-[85vh]'} flex flex-col transform transition-all duration-300 ease-out`}>
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-t-lg">
           <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">

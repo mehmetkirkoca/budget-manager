@@ -90,6 +90,7 @@ export default function Analysis() {
   const [showStatementAnalysis, setShowStatementAnalysis] = useState(false);
   const [showChartModal, setShowChartModal] = useState(false);
   const [showStartingCashDetails, setShowStartingCashDetails] = useState(false);
+  const [columnDetailModal, setColumnDetailModal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState({
@@ -206,6 +207,15 @@ export default function Analysis() {
       return { ...current, liquidAssetIds: [...selected] };
     });
   };
+
+  const flatAverages = useMemo(() => {
+    if (!settings || !data?.recurringPayments) return {};
+    const res = {};
+    data.recurringPayments.forEach(payment => {
+      res[payment._id] = calculateFlatAverage(payment, settings);
+    });
+    return res;
+  }, [settings, data?.recurringPayments]);
 
   // Helper calculations for starting cash breakdown
   const liquidAssetsDetails = useMemo(() => {
@@ -399,13 +409,90 @@ export default function Analysis() {
               <tr>
                 <th className="whitespace-nowrap px-4 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300">#</th>
                 <th className="whitespace-nowrap px-4 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300">{t('month')}</th>
-                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">{t('income')}</th>
-                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">{t('recurringPayments')}</th>
-                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">{t('creditCards')}</th>
-                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">{t('planned')}</th>
-                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">{t('loan')}</th>
-                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">{t('net')}</th>
-                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">{t('cash')}</th>
+                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    <span>{t('income')}</span>
+                    <button
+                      onClick={() => setColumnDetailModal('income')}
+                      className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors cursor-pointer"
+                      title={`${t('income')} Kalemleri`}
+                    >
+                      <FiEye className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </th>
+                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    <span>{t('recurringPayments')}</span>
+                    <button
+                      onClick={() => setColumnDetailModal('recurring')}
+                      className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors cursor-pointer"
+                      title={`${t('recurringPayments')} Kalemleri`}
+                    >
+                      <FiEye className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </th>
+                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    <span>{t('creditCards')}</span>
+                    <button
+                      onClick={() => setColumnDetailModal('creditCards')}
+                      className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors cursor-pointer"
+                      title={`${t('creditCards')} ve Taksit Kalemleri`}
+                    >
+                      <FiEye className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </th>
+                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    <span>{t('planned')}</span>
+                    <button
+                      onClick={() => setColumnDetailModal('planned')}
+                      className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors cursor-pointer"
+                      title={`${t('planned')} İşlem Kalemleri`}
+                    >
+                      <FiEye className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </th>
+                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    <span>{t('loan')}</span>
+                    <button
+                      onClick={() => setColumnDetailModal('loan')}
+                      className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors cursor-pointer"
+                      title={`${t('loan')} Senaryosu Detayları`}
+                    >
+                      <FiEye className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </th>
+                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    <span>{t('net')}</span>
+                    <button
+                      onClick={() => setColumnDetailModal('net')}
+                      className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors cursor-pointer"
+                      title={`${t('net')} Hesaplama Mantığı`}
+                    >
+                      <FiEye className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </th>
+                <th className="whitespace-nowrap px-4 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-300">
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    <span>{t('cash')}</span>
+                    <button
+                      onClick={() => setColumnDetailModal('cash')}
+                      className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors cursor-pointer"
+                      title={`${t('cash')} Rezervi Detayları`}
+                    >
+                      <FiEye className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -422,6 +509,11 @@ export default function Analysis() {
                     {row.creditCardStatement > 0 && (
                       <span className="block text-[10px] text-gray-400 dark:text-gray-500 font-normal">
                         {t('statement') || 'Ekstre'}: {fmt(row.creditCardStatement)}
+                      </span>
+                    )}
+                    {row.creditCardInterest > 0 && (
+                      <span className="block text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                        Faiz: +{fmt(row.creditCardInterest)}
                       </span>
                     )}
                   </td>
@@ -845,6 +937,444 @@ export default function Analysis() {
         size="xl"
       >
         <StatementAnalysisModal onClose={() => setShowStatementAnalysis(false)} />
+      </Modal>
+
+      {/* Column Content Items Detail Modal */}
+      <Modal
+        isOpen={Boolean(columnDetailModal)}
+        onClose={() => setColumnDetailModal(null)}
+        title={
+          columnDetailModal === 'income' ? `${t('income')} Kalemleri` :
+          columnDetailModal === 'recurring' ? `${t('recurringPayments')} Kalemleri` :
+          columnDetailModal === 'creditCards' ? `${t('creditCards')} ve Taksit Kalemleri` :
+          columnDetailModal === 'planned' ? `${t('planned')} İşlem Kalemleri` :
+          columnDetailModal === 'loan' ? `${t('loan')} Senaryosu Detayları` :
+          columnDetailModal === 'net' ? `${t('net')} Nakit Akışı Hesaplama Mantığı` :
+          columnDetailModal === 'cash' ? `${t('cash')} Rezervi ve Likit Varlıklar` :
+          'Kalem Detayları'
+        }
+        size={['creditCards', 'recurring', 'income'].includes(columnDetailModal) ? 'lg' : 'md'}
+      >
+        <div className="space-y-4 py-2 text-sm text-gray-600 dark:text-gray-300">
+          {/* 1. GELİR KALEMLERİ */}
+          {columnDetailModal === 'income' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40">
+                <div>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Toplam Aktif Düzenli Gelir</p>
+                  <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300 mt-0.5">
+                    {fmt(data.incomes.filter(i => i.isActive !== false && i.isRecurring).reduce((sum, i) => {
+                      const amt = numberValue(i.amount);
+                      const monthly = i.frequency === 'weekly' ? amt * 4.33 : i.frequency === 'quarterly' ? amt / 3 : i.frequency === 'yearly' ? amt / 12 : amt;
+                      return sum + monthly;
+                    }, 0))}
+                  </p>
+                </div>
+                <div className="text-right text-xs text-gray-500 dark:text-gray-400">
+                  <span>{data.incomes.filter(i => i.isActive !== false).length} Aktif Gelir Kalemi</span>
+                </div>
+              </div>
+
+              {data.incomes.length === 0 ? (
+                <div className="text-center py-6 text-xs text-gray-400">Kayıtlı gelir kalemi bulunamadı.</div>
+              ) : (
+                <div className="overflow-x-auto max-h-[50vh] border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 uppercase sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2">Gelir Kaynağı</th>
+                        <th className="px-3 py-2">Tutar</th>
+                        <th className="px-3 py-2">Frekans / Tür</th>
+                        <th className="px-3 py-2 text-right">Aylık Eşdeğer</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {data.incomes.filter(i => i.isActive !== false).map((income, idx) => {
+                        const amt = numberValue(income.amount);
+                        const monthly = income.isRecurring
+                          ? (income.frequency === 'weekly' ? amt * 4.33 : income.frequency === 'quarterly' ? amt / 3 : income.frequency === 'yearly' ? amt / 12 : amt)
+                          : amt;
+                        return (
+                          <tr key={income._id || idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-200">
+                              {income.title || income.description || income.name || 'Gelir'}
+                            </td>
+                            <td className="px-3 py-2 text-gray-600 dark:text-gray-300 font-semibold">{fmt(income.amount)}</td>
+                            <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                              <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[11px]">
+                                {income.isRecurring
+                                  ? (income.frequency === 'monthly' ? 'Aylık' : income.frequency === 'weekly' ? 'Haftalık' : income.frequency === 'yearly' ? 'Yıllık' : 'Aylık')
+                                  : 'Tek Seferlik'}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right font-bold text-emerald-600 dark:text-emerald-400">{fmt(monthly)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 2. TEKRARLAYAN ÖDEMELER */}
+          {columnDetailModal === 'recurring' && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40">
+                <div>
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">Toplam Tekrarlayan Gider</p>
+                  <p className="text-lg font-bold text-red-700 dark:text-red-300 mt-0.5">
+                    {fmt(data.recurringPayments.filter(p => p.isActive !== false).reduce((sum, p) => {
+                      if (settings.recurringPaymentsMode === 'ignore') return sum;
+                      if (settings.recurringPaymentsMode === 'dueMonth') return sum + (p.amount || 0);
+                      return sum + (flatAverages[p._id] !== undefined ? flatAverages[p._id] : (p.amount || 0));
+                    }, 0))}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
+                    Mod: {settings.recurringPaymentsMode === 'dueMonth' ? 'Gerçek Vade Ayı (Tam Tutar)' : settings.recurringPaymentsMode === 'ignore' ? 'Yoksay' : 'Aylık Eşdeğer (Düzleştirilmiş Ortalama)'}
+                  </span>
+                </div>
+              </div>
+
+              {data.recurringPayments.length === 0 ? (
+                <div className="text-center py-6 text-xs text-gray-400">Kayıtlı tekrarlayan ödeme bulunamadı.</div>
+              ) : (
+                <div className="overflow-x-auto max-h-[50vh] border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 uppercase sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2">Ödeme Başlığı</th>
+                        <th className="px-3 py-2">Kategori</th>
+                        <th className="px-3 py-2">Tutar / Frekans</th>
+                        <th className="px-3 py-2 text-right">Projeksiyon Değeri</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {data.recurringPayments.filter(p => p.isActive !== false).map((payment, idx) => {
+                        let projVal = 0;
+                        if (settings.recurringPaymentsMode === 'ignore') {
+                          projVal = 0;
+                        } else if (settings.recurringPaymentsMode === 'dueMonth') {
+                          projVal = payment.amount || 0;
+                        } else {
+                          projVal = flatAverages[payment._id] !== undefined ? flatAverages[payment._id] : (payment.amount || 0);
+                        }
+
+                        return (
+                          <tr key={payment._id || idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-200">
+                              {payment.name || payment.title || 'Ödeme'}
+                            </td>
+                            <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{payment.category?.name || '-'}</td>
+                            <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                              {fmt(payment.amount)} <span className="text-[10px] text-gray-400">({payment.frequency || 'monthly'})</span>
+                            </td>
+                            <td className="px-3 py-2 text-right font-bold text-red-600 dark:text-red-400">
+                              {fmt(projVal)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 3. KREDİ KARTLARI VE TAKSİTLER */}
+          {columnDetailModal === 'creditCards' && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40">
+                <div>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Uygulanan Kart Stratejisi</p>
+                  <p className="text-base font-bold text-indigo-800 dark:text-indigo-200 mt-0.5">
+                    {settings.creditCardStrategy === 'full' ? 'Ekstrenin / Borcun Tamamı' :
+                     settings.creditCardStrategy === 'fixed' ? `Sabit Tutar (${fmt(settings.fixedCreditCardPayment)})` :
+                     settings.creditCardStrategy === 'none' ? 'Ödeme Yapma' :
+                     `Asgari Ödeme (%${((settings.minimumPaymentRate || 0.03) * 100).toFixed(0)})`}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="p-2 bg-white/70 dark:bg-gray-800/70 rounded border border-indigo-100 dark:border-indigo-900/50">
+                    <span className="text-gray-400 block text-[11px]">Toplam Kart Borcu</span>
+                    <strong className="text-gray-900 dark:text-gray-100 font-bold">{fmt(data.creditCards.reduce((s, c) => s + (c.currentBalance || 0), 0))}</strong>
+                  </div>
+                  <div className="p-2 bg-white/70 dark:bg-gray-800/70 rounded border border-indigo-100 dark:border-indigo-900/50">
+                    <span className="text-gray-400 block text-[11px]">Aylık Taksit Yükü</span>
+                    <strong className="text-gray-900 dark:text-gray-100 font-bold">{fmt(data.installments.reduce((s, i) => s + (i.installmentAmount || 0), 0))}</strong>
+                  </div>
+                  <div className="p-2 bg-white/70 dark:bg-gray-800/70 rounded border border-indigo-100 dark:border-indigo-900/50">
+                    <span className="text-gray-400 block text-[11px]">Aylık Efektif Faiz</span>
+                    <strong className="text-amber-600 dark:text-amber-400 font-bold">%{(Number(scenario?.summary?.effectiveCardRate || 0.051) * 100).toFixed(2)}</strong>
+                  </div>
+                  <div className="p-2 bg-white/70 dark:bg-gray-800/70 rounded border border-indigo-100 dark:border-indigo-900/50">
+                    <span className="text-gray-400 block text-[11px]">İlk Ay Faiz Yükü</span>
+                    <strong className="text-red-600 dark:text-red-400 font-bold">+{fmt(scenario?.summary?.firstMonthInterest || 0)}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {settings.creditCardStrategy !== 'full' && (
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-800 dark:text-amber-200">
+                  <div>
+                    <span className="font-semibold block">Faiz & Vergi Uygulaması (KKDF %15 + BSMV %5):</span>
+                    <span>Asgari ödeme yapıldığında ödenmeyen kalan borca aylık faiz ve vergiler işletilerek sonraki aya devretmektedir.</span>
+                  </div>
+                  {scenario?.summary?.totalCardInterest > 0 && (
+                    <div className="text-right whitespace-nowrap pl-4">
+                      <span className="text-gray-500 dark:text-gray-400 block text-[10px]">Toplam Projeksiyon Faiz Yükü</span>
+                      <span className="font-bold text-red-600 dark:text-red-400 text-sm">+{fmt(scenario.summary.totalCardInterest)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2">Kayıtlı Kredi Kartları</h4>
+                <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 uppercase">
+                      <tr>
+                        <th className="px-3 py-2">Banka / Kart Adı</th>
+                        <th className="px-3 py-2">Hesap Kesim</th>
+                        <th className="px-3 py-2">Son Ödeme</th>
+                        <th className="px-3 py-2">Akdi Faiz (%)</th>
+                        <th className="px-3 py-2 text-right">Güncel Borç</th>
+                        <th className="px-3 py-2 text-right">Tahmini Faiz (Aylık)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {data.creditCards.map(card => {
+                        const monthlyRate = Number(card.interestRate?.monthly) || 0.0425;
+                        const minRate = Number(card.minimumPaymentRate) || Number(settings?.minimumPaymentRate) || 0.03;
+                        const unpaid = Math.max(0, Number(card.currentBalance || 0) * (1 - minRate));
+                        const estInterest = settings.creditCardStrategy !== 'full' ? unpaid * monthlyRate * 1.20 : 0;
+
+                        return (
+                          <tr key={card._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-200">{card.bankName} - {card.name}</td>
+                            <td className="px-3 py-2 text-gray-600 dark:text-gray-300">Ayın {card.statementDay}. günü</td>
+                            <td className="px-3 py-2 text-gray-600 dark:text-gray-300">Ayın {card.paymentDueDay}. günü</td>
+                            <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                              %{(monthlyRate * 100).toFixed(2)} <span className="text-[10px] text-gray-400">(Efektif: %{(monthlyRate * 1.20 * 100).toFixed(2)})</span>
+                            </td>
+                            <td className="px-3 py-2 text-right font-bold text-gray-800 dark:text-gray-200">{fmt(card.currentBalance)}</td>
+                            <td className="px-3 py-2 text-right font-bold text-amber-600 dark:text-amber-400">
+                              {estInterest > 0 ? `+${fmt(estInterest)}` : '₺0,00'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {data.installments.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2">Aktif Taksit Kalemleri</h4>
+                  <div className="overflow-x-auto max-h-[30vh] border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 uppercase sticky top-0">
+                        <tr>
+                          <th className="px-3 py-2">Harcama Açıklaması</th>
+                          <th className="px-3 py-2">Kart</th>
+                          <th className="px-3 py-2">Aylık Taksit</th>
+                          <th className="px-3 py-2">Kalan / Toplam</th>
+                          <th className="px-3 py-2 text-right">Toplam Kalan Borç</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {data.installments.map(inst => (
+                          <tr key={inst._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-200">{inst.purchaseDescription || 'Taksitli Alışveriş'}</td>
+                            <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{inst.creditCard?.name || '-'}</td>
+                            <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-200">{fmt(inst.installmentAmount)}</td>
+                            <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{inst.remainingInstallments} / {inst.totalInstallments || '-'}</td>
+                            <td className="px-3 py-2 text-right font-bold text-purple-600 dark:text-purple-400">{fmt(inst.installmentAmount * inst.remainingInstallments)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 4. PLANLI İŞLEMLER */}
+          {columnDetailModal === 'planned' && (
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Planlı İşlem Kalemleri</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Senaryoda belirli aylara planladığınız ek gelirler (+) ve ek harcamalar/yatırımlar (-) burada listelenir.
+                </p>
+              </div>
+
+              {settings.plannedTransactions?.length === 0 ? (
+                <div className="text-center py-6 text-xs text-gray-400">Henüz eklenmiş planlı işlem bulunmuyor.</div>
+              ) : (
+                <div className="overflow-x-auto max-h-[50vh] border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 uppercase sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2">İşlem Açıklaması</th>
+                        <th className="px-3 py-2">Yön</th>
+                        <th className="px-3 py-2">Tutar</th>
+                        <th className="px-3 py-2">Dönem / Ay</th>
+                        <th className="px-3 py-2">Tür</th>
+                        <th className="px-3 py-2 text-right">Durum</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {settings.plannedTransactions.map(tx => (
+                        <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                          <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-200">{tx.label || 'Planlı İşlem'}</td>
+                          <td className="px-3 py-2">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tx.direction === 'income' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'}`}>
+                              {tx.direction === 'income' ? '+ Gelir' : '- Gider'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 font-bold text-gray-800 dark:text-gray-200">{fmt(tx.amount)}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
+                            {tx.repeats ? `${tx.startMonth} - ${tx.endMonth || 'Sürekli'}` : tx.month}
+                          </td>
+                          <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{tx.repeats ? 'Tekrarlayan' : 'Tek Seferlik'}</td>
+                          <td className="px-3 py-2 text-right">
+                            <span className={`text-[11px] font-medium ${tx.enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
+                              {tx.enabled ? 'Etkin' : 'Pasif'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 5. KREDİ SENARYOSU */}
+          {columnDetailModal === 'loan' && (
+            <div className="space-y-4">
+              <div className={`p-3 rounded-lg border ${settings.loan?.enabled ? 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-100 dark:border-indigo-900/40' : 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700'}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold uppercase text-indigo-600 dark:text-indigo-400">Kredi Simülasyon Durumu</span>
+                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${settings.loan?.enabled ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>
+                    {settings.loan?.enabled ? 'Etkin' : 'Devre Dışı'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Kredi tutarı ilk ay başlangıç nakdine eklenir, ardından belirlenen vade boyunca her ay net nakit akışından taksit düşülür.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Kredi Tutarı</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-0.5">{fmt(settings.loan?.amount)}</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Akdi Baz Faiz</p>
+                  <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">%{(Number(settings.loan?.monthlyRate || 0) * 100).toFixed(2)}</p>
+                  <span className="text-[10px] text-gray-400">Efektif (+%30 Vergi): %{(Number(settings.loan?.monthlyRate || 0) * 1.30 * 100).toFixed(3)}</span>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Vade</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-0.5">{settings.loan?.termMonths || 12} Ay</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Aylık Taksit (Vergiler Dahil)</p>
+                  <p className="text-sm font-bold text-red-600 dark:text-red-400 mt-0.5">{fmt(loanSummary.monthlyPayment)}</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Toplam Geri Ödeme</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-0.5">{fmt(loanSummary.totalPayment)}</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Toplam Faiz & Vergi Yükü</p>
+                  <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5">{fmt(loanSummary.totalInterest)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 6. NET NAKİT AKIŞI FORMÜLÜ */}
+          {columnDetailModal === 'net' && (
+            <div className="space-y-4 text-xs text-gray-600 dark:text-gray-300">
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Aylık Net Nakit Akışı Formülü</p>
+                <p className="text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                  Net = (Gelir + Planlı Gelir) - (Tekrarlayan + Kredi Kartı + Kredi Taksiti + Planlı Gider)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-start gap-2 p-2.5 rounded bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
+                  <span className="text-emerald-600 font-bold text-sm">+</span>
+                  <div>
+                    <strong className="text-emerald-700 dark:text-emerald-300 block">Nakit Girişleri:</strong>
+                    <span>Aylık düzenli gelirler ve o aya tanımlı planlı ek gelirler (prim, tahsilat vb.)</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2 p-2.5 rounded bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30">
+                  <span className="text-red-600 font-bold text-sm">-</span>
+                  <div>
+                    <strong className="text-red-700 dark:text-red-300 block">Nakit Çıkışları:</strong>
+                    <span>Tekrarlayan fatura/aidatlar, seçili stratejiye göre kredi kartı ödemeleri, varsa kredi aylık taksitleri ve o aya planlanan ek harcamalar</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 7. NAKİT REZERVİ VE LİKİT VARLIKLAR */}
+          {columnDetailModal === 'cash' && (
+            <div className="space-y-4 text-xs text-gray-600 dark:text-gray-300">
+              <div className="p-3 rounded-lg bg-sky-50 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/40">
+                <p className="text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase mb-1">Kümülatif Nakit Hesaplama Mantığı</p>
+                <p className="text-sm font-mono font-bold text-sky-800 dark:text-sky-200">
+                  Ay Sonu Nakit = Başlangıç Nakdi + Kümülatif Net Akış
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="p-2.5 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                  <span className="text-gray-400 block">Başlangıç Nakdi</span>
+                  <strong className="text-sm text-gray-900 dark:text-gray-100 font-bold">{fmt(scenario?.summary?.initialCash)}</strong>
+                </div>
+                <div className="p-2.5 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                  <span className="text-gray-400 block">En Düşük Nakit</span>
+                  <strong className={`text-sm font-bold ${cashColor(scenario?.summary?.minCash)}`}>{fmt(scenario?.summary?.minCash)}</strong>
+                </div>
+                <div className="p-2.5 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                  <span className="text-gray-400 block">Finansman İhtiyacı</span>
+                  <strong className={`text-sm font-bold ${scenario?.summary?.financingNeed > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    {fmt(scenario?.summary?.financingNeed)}
+                  </strong>
+                </div>
+                <div className="p-2.5 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                  <span className="text-gray-400 block">Dönem Sonu Nakit</span>
+                  <strong className={`text-sm font-bold ${cashColor(scenario?.summary?.endingCash)}`}>{fmt(scenario?.summary?.endingCash)}</strong>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="pt-2 flex justify-end">
+            <button
+              onClick={() => setColumnDetailModal(null)}
+              className="rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
+            >
+              Kapat
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Modal for starting cash calculation breakdown */}

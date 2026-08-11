@@ -255,12 +255,15 @@ const projectPlannedTransactions = (transactions, monthDate) =>
 
 const monthlyLoanPayment = (principal, monthlyRate, termMonths) => {
   const amount = toNumber(principal);
-  const rate = toNumber(monthlyRate);
+  const baseRate = toNumber(monthlyRate);
   const term = Math.max(1, Math.round(toNumber(termMonths)));
   if (amount <= 0) return 0;
-  if (rate <= 0) return amount / term;
-  const factor = Math.pow(1 + rate, term);
-  return amount * rate * factor / (factor - 1);
+  if (baseRate <= 0) return amount / term;
+  
+  // Apply legal consumer loan taxes: 15% KKDF + 15% BSMV = 30% tax factor (rate * 1.30)
+  const effectiveRate = baseRate * 1.30;
+  const factor = Math.pow(1 + effectiveRate, term);
+  return amount * effectiveRate * factor / (factor - 1);
 };
 
 const loanEffectForMonth = (loan, monthDate) => {
@@ -312,6 +315,12 @@ export const buildScenario = ({
   const initialCardBalance = creditCards.reduce((sum, card) => sum + toNumber(card.currentBalance), 0);
   let cardBalance = initialCardBalance;
 
+  // Calculate weighted monthly contractual interest rate from cards or use TCMB default (4.25%)
+  const totalCardBalanceForRate = creditCards.reduce((sum, c) => sum + toNumber(c.currentBalance), 0);
+  const averageMonthlyCardRate = totalCardBalanceForRate > 0
+    ? creditCards.reduce((sum, c) => sum + (toNumber(c.currentBalance) * (toNumber(c.interestRate?.monthly) || 0.0425)), 0) / totalCardBalanceForRate
+    : (creditCards.map(c => toNumber(c.interestRate?.monthly)).find(r => r > 0) || 0.0425);
+
   for (let index = 0; index < horizonMonths; index += 1) {
     const date = addMonths(startDate, index);
     const income = projectIncomes(incomes, date);
@@ -336,7 +345,15 @@ export const buildScenario = ({
       }
     }
 
-    cardBalance = Math.max(0, statementBalance - creditCardPayment);
+    const unpaidBalance = Math.max(0, statementBalance - creditCardPayment);
+    let cardInterest = 0;
+    if (unpaidBalance > 0 && strategy !== 'full') {
+      // Contractual interest + 15% KKDF + 5% BSMV = averageMonthlyCardRate * 1.20
+      const effectiveRate = averageMonthlyCardRate * 1.20;
+      cardInterest = unpaidBalance * effectiveRate;
+    }
+
+    cardBalance = unpaidBalance + cardInterest;
 
     const planned = projectPlannedTransactions(plannedTransactions, date);
     const loan = loanEffectForMonth(settings.loan, date);
@@ -352,6 +369,8 @@ export const buildScenario = ({
       installment,
       creditCard: creditCardPayment,
       creditCardStatement: statementBalance,
+      creditCardInterest: cardInterest,
+      creditCardRemaining: cardBalance,
       planned,
       loanInflow: 0,
       loanPayment: loan.payment,
@@ -364,6 +383,7 @@ export const buildScenario = ({
   const financingNeed = Math.max(0, -minCash);
   const endingCash = rows.length ? rows[rows.length - 1].cash : startingCash;
   const firstNegative = rows.find(row => row.cash < 0);
+  const totalCardInterest = rows.reduce((sum, r) => sum + (r.creditCardInterest || 0), 0);
 
   return {
     rows,
@@ -373,6 +393,10 @@ export const buildScenario = ({
       minCash,
       financingNeed,
       firstNegativeMonth: firstNegative?.key || null,
+      averageMonthlyCardRate,
+      effectiveCardRate: averageMonthlyCardRate * 1.20,
+      totalCardInterest,
+      firstMonthInterest: rows[0]?.creditCardInterest || 0,
     },
   };
 };
@@ -380,11 +404,15 @@ export const buildScenario = ({
 export const summarizeLoan = loan => {
   const term = Math.max(1, Math.round(toNumber(loan?.termMonths) || 12));
   const amount = toNumber(loan?.amount);
-  const monthlyRate = toNumber(loan?.monthlyRate);
-  const monthlyPayment = monthlyLoanPayment(amount, monthlyRate, term);
+  const baseRate = toNumber(loan?.monthlyRate);
+  const monthlyPayment = monthlyLoanPayment(amount, baseRate, term);
+  const effectiveMonthlyRate = baseRate * 1.30;
+
   return {
     amount,
     termMonths: term,
+    baseRate,
+    effectiveMonthlyRate,
     monthlyPayment,
     totalPayment: monthlyPayment * term,
     totalInterest: monthlyPayment * term - amount,

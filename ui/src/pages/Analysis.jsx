@@ -34,7 +34,9 @@ import {
   buildScenario,
   calculateFlatAverage,
   getDefaultScenarioSettings,
+  normalizeLoans,
   summarizeLoan,
+  summarizeLoans,
 } from '../services/scenarioSimulator';
 
 const fmt = value => creditCardUtils.formatCurrency(value || 0);
@@ -76,6 +78,16 @@ const makeTransaction = startMonth => ({
   startMonth,
   endMonth: '',
   repeats: false,
+  enabled: true,
+});
+
+const makeLoan = startMonth => ({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  name: '',
+  amount: 100000,
+  termMonths: 12,
+  monthlyRate: 0.0389,
+  startMonth: startMonth || '',
   enabled: true,
 });
 
@@ -149,7 +161,8 @@ export default function Analysis() {
     return res;
   }, [data, settings]);
 
-  const loanSummary = useMemo(() => summarizeLoan(settings?.loan), [settings]);
+  const loansList = useMemo(() => normalizeLoans(settings), [settings]);
+  const loansSummary = useMemo(() => summarizeLoans(loansList), [loansList]);
 
   const monthFormatter = useMemo(() => new Intl.DateTimeFormat(i18n.language, {
     month: 'short',
@@ -161,8 +174,49 @@ export default function Analysis() {
     setSettings(current => ({ ...current, ...patch }));
   };
 
-  const updateLoan = patch => {
-    setSettings(current => ({ ...current, loan: { ...current.loan, ...patch } }));
+  const updateLoanItem = (id, patch) => {
+    setSettings(current => {
+      const currentLoans = normalizeLoans(current);
+      return {
+        ...current,
+        loans: currentLoans.map(loan => loan.id === id ? { ...loan, ...patch } : loan),
+      };
+    });
+  };
+
+  const addLoanItem = () => {
+    setSettings(current => {
+      const currentLoans = normalizeLoans(current);
+      return {
+        ...current,
+        loans: [...currentLoans, makeLoan(current.startMonth)],
+      };
+    });
+  };
+
+  const removeLoanItem = id => {
+    setSettings(current => {
+      const currentLoans = normalizeLoans(current);
+      return {
+        ...current,
+        loans: currentLoans.filter(loan => loan.id !== id),
+      };
+    });
+  };
+
+  const duplicateLoanItem = loan => {
+    const newLoan = {
+      ...loan,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: loan.name ? `${loan.name} (Kopya)` : '',
+    };
+    setSettings(current => {
+      const currentLoans = normalizeLoans(current);
+      return {
+        ...current,
+        loans: [...currentLoans, newLoan],
+      };
+    });
   };
 
   const updateTransaction = (id, patch) => {
@@ -227,9 +281,14 @@ export default function Analysis() {
     return liquidAssetsDetails.reduce((sum, asset) => sum + numberValue(asset.currentValueTRY || asset.currentAmount), 0);
   }, [liquidAssetsDetails]);
 
-  const loanAmount = useMemo(() => {
-    return settings?.loan && settings.loan.enabled !== false ? numberValue(settings.loan.amount) : 0;
-  }, [settings?.loan]);
+  const totalStartingLoans = useMemo(() => {
+    if (!settings) return 0;
+    const loans = normalizeLoans(settings);
+    const startMonthStr = settings.startMonth;
+    return loans
+      .filter(l => l.enabled !== false && (l.startMonth ? l.startMonth === startMonthStr : true))
+      .reduce((sum, l) => sum + numberValue(l.amount), 0);
+  }, [settings]);
 
   // Prepare data for the chart
   const chartData = useMemo(() => {
@@ -342,8 +401,8 @@ export default function Analysis() {
               <div>
                 <span className="text-gray-500 dark:text-gray-400 font-medium">{t('loanScenario')}: </span>
                 <span className="font-semibold text-gray-800 dark:text-gray-200">
-                  {settings.loan.enabled 
-                    ? `${fmt(settings.loan.amount)} | ${settings.loan.termMonths} ${t('month')} | %${(settings.loan.monthlyRate * 100).toFixed(2)}`
+                  {loansSummary.count > 0 
+                    ? `${loansSummary.count} Kredi (${fmt(loansSummary.totalPrincipal)} | Taksit: ${fmt(loansSummary.totalMonthlyPayment)})`
                     : t('disabled')}
                 </span>
               </div>
@@ -363,19 +422,19 @@ export default function Analysis() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            {settings.loan.enabled && (
+            {loansSummary.count > 0 && (
               <div className="flex items-center gap-4 border-t border-gray-100 pt-3 sm:border-t-0 sm:pt-0 sm:border-r sm:pr-4 dark:border-gray-700">
                 <div className="text-center text-xs">
                   <p className="text-gray-500 dark:text-gray-400 text-[10px] uppercase font-semibold">{t('monthlyPayment')}</p>
-                  <p className="font-bold text-gray-800 dark:text-gray-200 text-sm mt-0.5">{fmt(loanSummary.monthlyPayment)}</p>
+                  <p className="font-bold text-red-600 dark:text-red-400 text-sm mt-0.5">{fmt(loansSummary.totalMonthlyPayment)}</p>
                 </div>
                 <div className="text-center text-xs">
                   <p className="text-gray-500 dark:text-gray-400 text-[10px] uppercase font-semibold">{t('totalPayment')}</p>
-                  <p className="font-bold text-gray-800 dark:text-gray-200 text-sm mt-0.5">{fmt(loanSummary.totalPayment)}</p>
+                  <p className="font-bold text-gray-800 dark:text-gray-200 text-sm mt-0.5">{fmt(loansSummary.totalPayment)}</p>
                 </div>
                 <div className="text-center text-xs">
-                  <p className="text-gray-500 dark:text-gray-400 text-[10px] uppercase font-semibold">{t('totalInterest')}</p>
-                  <p className="font-bold text-gray-800 dark:text-gray-200 text-sm mt-0.5">{fmt(loanSummary.totalInterest)}</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-[10px] uppercase font-semibold">Toplam Faiz & Vergi</p>
+                  <p className="font-bold text-amber-600 dark:text-amber-400 text-sm mt-0.5">{fmt(loansSummary.totalInterest)}</p>
                 </div>
               </div>
             )}
@@ -720,60 +779,165 @@ export default function Analysis() {
 
             {activeTab === 'loan' && (
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 border-b pb-2 mb-3">
-                  {t('loanScenario')}
-                </h4>
                 <div className="flex items-center justify-between border-b pb-2">
-                  <span className="text-sm font-medium text-gray-705 dark:text-gray-300">{t('enabled')}</span>
-                  <input
-                    type="checkbox"
-                    checked={settings.loan.enabled}
-                    onChange={event => updateLoan({ enabled: event.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  />
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                      {t('loanScenario')} ({loansList.length})
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Farklı banka, tutar, faiz ve vadelerde birden fazla kredi ekleyip senaryoyu test edin.
+                    </p>
+                  </div>
+                  <button
+                    onClick={addLoanItem}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors cursor-pointer"
+                  >
+                    <FiPlus className="h-3.5 w-3.5" />
+                    {t('addLoan')}
+                  </button>
                 </div>
-                {settings.loan.enabled && (
-                  <div className="space-y-3 pt-1">
-                    <label className="block text-sm">
-                      <span className="mb-1 block font-medium text-gray-600 dark:text-gray-300">{t('loanAmount')}</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={settings.loan.amount}
-                        onChange={event => updateLoan({ amount: numberValue(event.target.value) })}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                      />
-                    </label>
-                    <label className="block text-sm">
-                      <span className="mb-1 block font-medium text-gray-600 dark:text-gray-300">{t('termMonths')}</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={settings.loan.termMonths}
-                        onChange={event => updateLoan({ termMonths: numberValue(event.target.value) })}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                      />
-                    </label>
-                    <label className="block text-sm">
-                      <span className="mb-1 block font-medium text-gray-600 dark:text-gray-300">{t('monthlyRate')} (%)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={settings.loan.monthlyRate !== undefined ? Number((settings.loan.monthlyRate * 100).toFixed(4)) : ''}
-                        onChange={event => updateLoan({ monthlyRate: numberValue(event.target.value) / 100 })}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                      />
-                    </label>
-                    <label className="block text-sm">
-                      <span className="mb-1 block font-medium text-gray-600 dark:text-gray-300">{t('startMonth')}</span>
-                      <input
-                        type="month"
-                        value={settings.loan.startMonth}
-                        onChange={event => updateLoan({ startMonth: event.target.value })}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                      />
-                    </label>
+
+                {loansSummary.count > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 text-xs">
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400 block text-[10px] uppercase font-semibold">Aktif Kredi</span>
+                      <strong className="text-gray-900 dark:text-gray-100 text-sm">{loansSummary.count} Adet</strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400 block text-[10px] uppercase font-semibold">Toplam Anapara</span>
+                      <strong className="text-gray-900 dark:text-gray-100 text-sm">{fmt(loansSummary.totalPrincipal)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400 block text-[10px] uppercase font-semibold">Aylık Toplam Taksit</span>
+                      <strong className="text-red-600 dark:text-red-400 text-sm">{fmt(loansSummary.totalMonthlyPayment)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400 block text-[10px] uppercase font-semibold">Toplam Faiz & Vergi</span>
+                      <strong className="text-amber-600 dark:text-amber-400 text-sm">{fmt(loansSummary.totalInterest)}</strong>
+                    </div>
+                  </div>
+                )}
+
+                {loansList.length === 0 ? (
+                  <div className="text-center py-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t('noLoans')}</p>
+                    <button
+                      onClick={addLoanItem}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300 px-4 py-2 text-xs font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors cursor-pointer"
+                    >
+                      <FiPlus className="h-4 w-4" />
+                      {t('addLoan')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3.5 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
+                    {loansList.map((loan, idx) => {
+                      const summary = summarizeLoan(loan);
+                      return (
+                        <div
+                          key={loan.id || idx}
+                          className={`rounded-lg border transition-colors p-3.5 ${
+                            loan.enabled !== false
+                              ? 'border-indigo-200/80 bg-white dark:border-indigo-900/60 dark:bg-gray-800 shadow-sm'
+                              : 'border-gray-200 bg-gray-50/60 dark:border-gray-700 dark:bg-gray-800/40 opacity-70'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-gray-100 dark:border-gray-700/60">
+                            <div className="flex items-center gap-2 flex-1">
+                              <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-bold">
+                                {idx + 1}
+                              </span>
+                              <input
+                                value={loan.name || ''}
+                                onChange={event => updateLoanItem(loan.id, { name: event.target.value })}
+                                placeholder="Kredi Başlığı / Banka (Örn: Akbank İhtiyaç)"
+                                className="font-semibold text-sm rounded border border-transparent hover:border-gray-300 focus:border-indigo-500 px-2 py-0.5 dark:text-gray-100 dark:bg-gray-700/50 flex-1 max-w-[260px]"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="flex items-center gap-1 text-xs cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={loan.enabled !== false}
+                                  onChange={event => updateLoanItem(loan.id, { enabled: event.target.checked })}
+                                  className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span className={loan.enabled !== false ? 'font-medium text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}>
+                                  {loan.enabled !== false ? 'Etkin' : 'Pasif'}
+                                </span>
+                              </label>
+                              <button
+                                onClick={() => duplicateLoanItem(loan)}
+                                className="p-1.5 text-gray-400 hover:text-indigo-600 rounded transition-colors cursor-pointer"
+                                title={t('duplicate')}
+                              >
+                                <FiCopy className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => removeLoanItem(loan.id)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors cursor-pointer"
+                                title={t('delete')}
+                              >
+                                <FiTrash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                            <label className="block">
+                              <span className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400">{t('loanAmount')}</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={loan.amount || ''}
+                                onChange={event => updateLoanItem(loan.id, { amount: numberValue(event.target.value) })}
+                                className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400">{t('termMonths')} (Ay)</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={loan.termMonths || 12}
+                                onChange={event => updateLoanItem(loan.id, { termMonths: numberValue(event.target.value) })}
+                                className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400">{t('monthlyRate')} (%)</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={loan.monthlyRate !== undefined ? Number((loan.monthlyRate * 100).toFixed(4)) : 3.89}
+                                onChange={event => updateLoanItem(loan.id, { monthlyRate: numberValue(event.target.value) / 100 })}
+                                className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-gray-400">{t('startMonth')}</span>
+                              <input
+                                type="month"
+                                value={loan.startMonth || settings.startMonth}
+                                onChange={event => updateLoanItem(loan.id, { startMonth: event.target.value })}
+                                className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                              />
+                            </label>
+                          </div>
+
+                          <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-gray-700/50 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                            <div className="flex items-center gap-3">
+                              <span>Aylık Taksit: <strong className="text-red-600 dark:text-red-400 font-bold">{fmt(summary.monthlyPayment)}</strong></span>
+                              <span className="text-gray-400">(Efektif: %{(summary.effectiveMonthlyRate * 100).toFixed(3)})</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">Geri Ödeme: <strong className="text-gray-900 dark:text-gray-100">{fmt(summary.totalPayment)}</strong></span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1262,45 +1426,83 @@ export default function Analysis() {
           {/* 5. KREDİ SENARYOSU */}
           {columnDetailModal === 'loan' && (
             <div className="space-y-4">
-              <div className={`p-3 rounded-lg border ${settings.loan?.enabled ? 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-100 dark:border-indigo-900/40' : 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700'}`}>
+              <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold uppercase text-indigo-600 dark:text-indigo-400">Kredi Simülasyon Durumu</span>
-                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${settings.loan?.enabled ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>
-                    {settings.loan?.enabled ? 'Etkin' : 'Devre Dışı'}
+                  <span className="text-xs font-semibold uppercase text-indigo-600 dark:text-indigo-400">Kredi Simülasyon Özeti</span>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200">
+                    {loansSummary.count} Aktif Kredi
                   </span>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Kredi tutarı ilk ay başlangıç nakdine eklenir, ardından belirlenen vade boyunca her ay net nakit akışından taksit düşülür.
+                  Her kredinin anaparası başlangıç ayında nakit rezervine eklenir, ardından belirlenen vadeler boyunca aylık nakit akışından taksitler (%15 KKDF + %15 BSMV yasal vergileri dahil) düşülür.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Kredi Tutarı</p>
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-0.5">{fmt(settings.loan?.amount)}</p>
+              {loansSummary.count > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Toplam Kredi Tutarı</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-0.5">{fmt(loansSummary.totalPrincipal)}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Aylık Toplam Taksit</p>
+                    <p className="text-sm font-bold text-red-600 dark:text-red-400 mt-0.5">{fmt(loansSummary.totalMonthlyPayment)}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Toplam Geri Ödeme</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-0.5">{fmt(loansSummary.totalPayment)}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Toplam Faiz & Vergi</p>
+                    <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5">{fmt(loansSummary.totalInterest)}</p>
+                  </div>
                 </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Akdi Baz Faiz</p>
-                  <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">%{(Number(settings.loan?.monthlyRate || 0) * 100).toFixed(2)}</p>
-                  <span className="text-[10px] text-gray-400">Efektif (+%30 Vergi): %{(Number(settings.loan?.monthlyRate || 0) * 1.30 * 100).toFixed(3)}</span>
+              )}
+
+              {loansList.length === 0 ? (
+                <div className="text-center py-6 text-xs text-gray-400">Henüz eklenmiş bir kredi paketi bulunmuyor.</div>
+              ) : (
+                <div className="overflow-x-auto max-h-[50vh] border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 uppercase sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2">Kredi Başlığı</th>
+                        <th className="px-3 py-2">Başlangıç</th>
+                        <th className="px-3 py-2">Tutar</th>
+                        <th className="px-3 py-2">Akdi Faiz (%)</th>
+                        <th className="px-3 py-2">Vade</th>
+                        <th className="px-3 py-2 text-right">Aylık Taksit</th>
+                        <th className="px-3 py-2 text-right">Toplam Geri Ödeme</th>
+                        <th className="px-3 py-2 text-center">Durum</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {loansList.map((loan, idx) => {
+                        const summary = summarizeLoan(loan);
+                        return (
+                          <tr key={loan.id || idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-200">{loan.name || `Kredi #${idx + 1}`}</td>
+                            <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{loan.startMonth || '-'}</td>
+                            <td className="px-3 py-2 font-semibold text-gray-900 dark:text-gray-100">{fmt(loan.amount)}</td>
+                            <td className="px-3 py-2 text-indigo-600 dark:text-indigo-400 font-medium">
+                              %{(Number(loan.monthlyRate || 0) * 100).toFixed(2)}
+                              <span className="text-[10px] text-gray-400 block font-normal">(Efektif: %{(summary.effectiveMonthlyRate * 100).toFixed(3)})</span>
+                            </td>
+                            <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{loan.termMonths || 12} Ay</td>
+                            <td className="px-3 py-2 text-right font-bold text-red-600 dark:text-red-400">{fmt(summary.monthlyPayment)}</td>
+                            <td className="px-3 py-2 text-right font-semibold text-gray-800 dark:text-gray-200">{fmt(summary.totalPayment)}</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${loan.enabled !== false ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>
+                                {loan.enabled !== false ? 'Etkin' : 'Pasif'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Vade</p>
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-0.5">{settings.loan?.termMonths || 12} Ay</p>
-                </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Aylık Taksit (Vergiler Dahil)</p>
-                  <p className="text-sm font-bold text-red-600 dark:text-red-400 mt-0.5">{fmt(loanSummary.monthlyPayment)}</p>
-                </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Toplam Geri Ödeme</p>
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-0.5">{fmt(loanSummary.totalPayment)}</p>
-                </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">Toplam Faiz & Vergi Yükü</p>
-                  <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5">{fmt(loanSummary.totalInterest)}</p>
-                </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -1419,10 +1621,10 @@ export default function Analysis() {
               </div>
             )}
 
-            {loanAmount > 0 && (
+            {totalStartingLoans > 0 && (
               <div className="flex justify-between items-center py-1.5 border-b border-gray-50 dark:border-gray-800 text-emerald-600 dark:text-emerald-400 font-medium">
                 <span>Aktif Kredi Senaryosu (Giriş)</span>
-                <span>+{fmt(loanAmount)}</span>
+                <span>+{fmt(totalStartingLoans)}</span>
               </div>
             )}
           </div>

@@ -266,17 +266,61 @@ const monthlyLoanPayment = (principal, monthlyRate, termMonths) => {
   return amount * effectiveRate * factor / (factor - 1);
 };
 
-const loanEffectForMonth = (loan, monthDate) => {
-  if (!loan?.enabled) return { inflow: 0, payment: 0 };
-  const start = loan.startMonth ? new Date(`${loan.startMonth}-01T00:00:00`) : monthDate;
-  const term = Math.max(1, Math.round(toNumber(loan.termMonths)));
-  const payment = monthlyLoanPayment(loan.amount, loan.monthlyRate, term);
+export const normalizeLoans = (settings = {}) => {
+  if (Array.isArray(settings?.loans)) {
+    return settings.loans;
+  }
+  if (settings?.loan && typeof settings.loan === 'object' && settings.loan.enabled) {
+    return [{
+      id: 'legacy-loan',
+      name: 'Kredi Senaryosu',
+      enabled: settings.loan.enabled !== false,
+      amount: toNumber(settings.loan.amount),
+      termMonths: toNumber(settings.loan.termMonths) || 12,
+      monthlyRate: toNumber(settings.loan.monthlyRate) || 0.0389,
+      startMonth: settings.loan.startMonth || settings.startMonth,
+    }];
+  }
+  return [];
+};
 
-  if (monthDate < start) return { inflow: 0, payment: 0 };
-  const monthsSinceStart = (monthDate.getFullYear() - start.getFullYear()) * 12 + monthDate.getMonth() - start.getMonth();
+export const loansEffectForMonth = (loans = [], monthDate) => {
+  let totalInflow = 0;
+  let totalPayment = 0;
+  const breakdown = [];
+
+  (loans || []).forEach(loan => {
+    if (loan.enabled === false) return;
+    const start = loan.startMonth ? new Date(`${loan.startMonth}-01T00:00:00`) : monthDate;
+    const term = Math.max(1, Math.round(toNumber(loan.termMonths) || 12));
+    const payment = monthlyLoanPayment(loan.amount, loan.monthlyRate, term);
+
+    if (monthDate < start) return;
+    const monthsSinceStart = (monthDate.getFullYear() - start.getFullYear()) * 12 + monthDate.getMonth() - start.getMonth();
+    
+    const inflow = monthsSinceStart === 0 ? toNumber(loan.amount) : 0;
+    const isPaying = monthsSinceStart >= 0 && monthsSinceStart < term;
+    const currentPayment = isPaying ? payment : 0;
+
+    totalInflow += inflow;
+    totalPayment += currentPayment;
+
+    if (inflow > 0 || currentPayment > 0) {
+      breakdown.push({
+        id: loan.id,
+        name: loan.name || 'Kredi',
+        inflow,
+        payment: currentPayment,
+        monthIndex: monthsSinceStart + 1,
+        term,
+      });
+    }
+  });
+
   return {
-    inflow: monthsSinceStart === 0 ? toNumber(loan.amount) : 0,
-    payment: monthsSinceStart >= 0 && monthsSinceStart < term ? payment : 0,
+    inflow: totalInflow,
+    payment: totalPayment,
+    breakdown,
   };
 };
 
@@ -299,8 +343,15 @@ export const buildScenario = ({
       .filter(asset => settings.liquidAssetIds?.includes(asset._id))
       .reduce((sum, asset) => sum + toNumber(asset.currentValueTRY || asset.currentAmount), 0);
 
-  const loanAmount = settings.loan && settings.loan.enabled !== false ? toNumber(settings.loan.amount) : 0;
-  const startingCash = initialCash + loanAmount;
+  const loans = normalizeLoans(settings);
+  const startMonthStr = monthKey(startDate);
+  
+  // Initial cash: add principal of loans starting in startMonth (index 0)
+  const initialLoansAmount = loans
+    .filter(l => l.enabled !== false && (l.startMonth ? l.startMonth === startMonthStr : true))
+    .reduce((sum, l) => sum + toNumber(l.amount), 0);
+
+  const startingCash = initialCash + initialLoansAmount;
   let cash = startingCash;
   const rows = [];
 
@@ -356,9 +407,10 @@ export const buildScenario = ({
     cardBalance = unpaidBalance + cardInterest;
 
     const planned = projectPlannedTransactions(plannedTransactions, date);
-    const loan = loanEffectForMonth(settings.loan, date);
-    // Loan inflow is added directly to starting cash, so only subtract payments from monthly cash flow
-    const net = income + planned - recurring - creditCardPayment - loan.payment;
+    const loanEffect = loansEffectForMonth(loans, date);
+    // For loans starting in future months (index > 0), their inflow is added to that month's cash flow
+    const futureLoanInflow = index > 0 ? loanEffect.inflow : 0;
+    const net = income + planned + futureLoanInflow - recurring - creditCardPayment - loanEffect.payment;
     cash += net;
 
     rows.push({
@@ -372,8 +424,9 @@ export const buildScenario = ({
       creditCardInterest: cardInterest,
       creditCardRemaining: cardBalance,
       planned,
-      loanInflow: 0,
-      loanPayment: loan.payment,
+      loanInflow: loanEffect.inflow,
+      loanPayment: loanEffect.payment,
+      loanBreakdown: loanEffect.breakdown,
       net,
       cash,
     });
@@ -419,6 +472,36 @@ export const summarizeLoan = loan => {
   };
 };
 
+export const summarizeLoans = (loans = []) => {
+  const allLoans = Array.isArray(loans) ? loans : [];
+  const activeLoans = allLoans.filter(l => l.enabled !== false && toNumber(l.amount) > 0);
+  const loanDetails = allLoans.map(loan => {
+    const summary = summarizeLoan(loan);
+    return {
+      id: loan.id,
+      name: loan.name || 'Kredi',
+      ...summary,
+      startMonth: loan.startMonth,
+      enabled: loan.enabled !== false,
+    };
+  });
+
+  const activeLoanDetails = loanDetails.filter(l => l.enabled);
+  const totalPrincipal = activeLoanDetails.reduce((s, l) => s + l.amount, 0);
+  const totalMonthlyPayment = activeLoanDetails.reduce((s, l) => s + l.monthlyPayment, 0);
+  const totalPayment = activeLoanDetails.reduce((s, l) => s + l.totalPayment, 0);
+  const totalInterest = activeLoanDetails.reduce((s, l) => s + l.totalInterest, 0);
+
+  return {
+    count: activeLoans.length,
+    totalPrincipal,
+    totalMonthlyPayment,
+    totalPayment,
+    totalInterest,
+    loanDetails,
+  };
+};
+
 export const getDefaultScenarioSettings = ({ assets = [] } = {}) => {
   const today = startOfMonth(new Date());
   const liquidAssetIds = assets
@@ -436,12 +519,6 @@ export const getDefaultScenarioSettings = ({ assets = [] } = {}) => {
     minimumPaymentRate: 0.40,
     fixedCreditCardPayment: 0,
     plannedTransactions: [],
-    loan: {
-      enabled: false,
-      amount: 0,
-      termMonths: 12,
-      monthlyRate: 0.03,
-      startMonth: monthKey(today),
-    },
+    loans: [],
   };
 };

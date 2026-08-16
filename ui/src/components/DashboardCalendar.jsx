@@ -3,7 +3,9 @@ import { getUpcomingPayments } from '../services/recurringPaymentService';
 import { creditCardService } from '../services/creditCardService';
 import { getExpensesByDateRange } from '../services/expenseService';
 import { useTranslation } from 'react-i18next';
-import { FiCalendar, FiChevronLeft, FiChevronRight, FiGrid, FiList } from 'react-icons/fi';
+import { FiCalendar, FiChevronLeft, FiChevronRight, FiGrid, FiList, FiRefreshCw, FiExternalLink, FiDownload } from 'react-icons/fi';
+import Modal from './Modal';
+import { downloadICSFile, getGoogleCalendarUrl } from '../services/calendarSyncService';
 
 const Tooltip = ({ payment, anchorRef }) => {
   const { t } = useTranslation();
@@ -130,7 +132,20 @@ const DashboardCalendar = ({ monthlyIncome = 0, onCurrentMonthTotal }) => {
   const [viewMode, setViewMode] = useState('monthly');
   const [currentWeek, setCurrentWeek] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(0);
+  const [showSyncModal, setShowSyncModal] = useState(false);
   const loadedMonths = useRef(new Set());
+
+  const getSelectedMonthPayments = () => {
+    const today = new Date();
+    const targetDate = new Date(today.getFullYear(), today.getMonth() + currentMonth, 1);
+    const targetYear = targetDate.getFullYear();
+    const targetMonth = targetDate.getMonth();
+
+    return payments.filter(p => {
+      const d = new Date(p.nextDue);
+      return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
+    }).sort((a, b) => new Date(a.nextDue) - new Date(b.nextDue));
+  };
 
   const fetchMonth = useCallback(async (monthOffset) => {
     const now = new Date();
@@ -339,12 +354,15 @@ const DashboardCalendar = ({ monthlyIncome = 0, onCurrentMonthTotal }) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-between gap-3 mb-6">
+        {/* Sol: Başlık */}
+        <div className="flex items-center space-x-2 shrink-0">
           <FiCalendar className="text-blue-500" size={20} />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('upcomingPayments')}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{t('upcomingPayments')}</h3>
         </div>
-        <div className="flex items-center space-x-4">
+
+        {/* Orta: Görünüm ve Tarih Seçimi */}
+        <div className="flex items-center gap-3">
           <div className="flex items-center space-x-1">
             <button
               onClick={() => setViewMode('weekly')}
@@ -369,7 +387,7 @@ const DashboardCalendar = ({ monthlyIncome = 0, onCurrentMonthTotal }) => {
             >
               <FiChevronLeft size={16} />
             </button>
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[140px] text-center">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[130px] text-center whitespace-nowrap">
               {viewMode === 'weekly' ? formatWeekRange() : formatMonthYear()}
             </span>
             <button
@@ -380,6 +398,16 @@ const DashboardCalendar = ({ monthlyIncome = 0, onCurrentMonthTotal }) => {
             </button>
           </div>
         </div>
+
+        {/* Sağ: Google Takvim'e Aktar Butonu */}
+        <button
+          onClick={() => setShowSyncModal(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 rounded-lg text-xs font-semibold transition-colors cursor-pointer border border-blue-200/60 dark:border-blue-800/50 shadow-sm whitespace-nowrap"
+          title="Seçili ayı Google Calendar ile senkronize et"
+        >
+          <FiRefreshCw className="h-3.5 w-3.5" />
+          <span>Google Takvim'e Aktar</span>
+        </button>
       </div>
 
       {loading ? (
@@ -485,6 +513,132 @@ const DashboardCalendar = ({ monthlyIncome = 0, onCurrentMonthTotal }) => {
             );
           })()}
         </>
+      )}
+
+      {/* Google Calendar Sync Modal */}
+      {showSyncModal && (
+        <Modal
+          isOpen={showSyncModal}
+          onClose={() => setShowSyncModal(false)}
+          title={`Google Takvim Senkronizasyonu - ${formatMonthYear()}`}
+          size="lg"
+        >
+          {(() => {
+            const currentMonthPayments = getSelectedMonthPayments();
+            const totalAmount = currentMonthPayments.reduce((sum, p) => sum + (p.effectiveAmount || p.amount || 0), 0);
+
+            return (
+              <div className="space-y-4 text-xs text-gray-700 dark:text-gray-200">
+                {/* Toplu İçe Aktarma Banner */}
+                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold uppercase block">
+                      {formatMonthYear()} Ayı Toplu Ödemeleri
+                    </span>
+                    <p className="text-lg font-bold text-blue-900 dark:text-blue-100 mt-0.5">
+                      {totalAmount.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-normal ml-2">
+                        ({currentMonthPayments.length} Adet Ödeme)
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => downloadICSFile(currentMonthPayments, formatMonthYear())}
+                      disabled={currentMonthPayments.length === 0}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold shadow-sm hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <FiDownload className="h-4 w-4" />
+                      Tüm Ayı İndir (.ics)
+                    </button>
+                    <a
+                      href="https://calendar.google.com/calendar/u/0/r/settings/export"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3.5 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      title="Google Takvim İçe Aktar Sayfasını Aç"
+                    >
+                      <span>Google Takvim İçe Aktar</span>
+                      <FiExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+                  <p>
+                    <strong className="text-gray-800 dark:text-gray-200">💡 Nasıl Kullanılır?</strong><br />
+                    1. <strong>"Tüm Ayı İndir (.ics)"</strong> butonuna basarak seçili ayın tüm ödemelerini tek takvim dosyası olarak indirin.<br />
+                    2. İndirdiğiniz dosyayı <strong>"Google Takvim İçe Aktar"</strong> sayfasına sürükleyip bırakarak tüm ayı tek seferde takviminize işleyin.
+                  </p>
+                </div>
+
+                {/* Payments Table */}
+                <div>
+                  <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-2">
+                    {formatMonthYear()} Ayı Ödeme Listesi
+                  </h4>
+                  {currentMonthPayments.length === 0 ? (
+                    <div className="text-center py-6 text-gray-400 border border-dashed rounded-lg">Bu aya ait planlanmış ödeme bulunmuyor.</div>
+                  ) : (
+                    <div className="overflow-x-auto max-h-[40vh] border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 uppercase sticky top-0">
+                          <tr>
+                            <th className="px-3 py-2">Vade Tarihi</th>
+                            <th className="px-3 py-2">Ödeme Başlığı</th>
+                            <th className="px-3 py-2">Kategori</th>
+                            <th className="px-3 py-2">Tutar</th>
+                            <th className="px-3 py-2 text-right">Doğrudan Aç</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {currentMonthPayments.map((payment, idx) => {
+                            const dateObj = new Date(payment.nextDue);
+                            const dateFormatted = !isNaN(dateObj.getTime())
+                              ? dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short' })
+                              : payment.nextDue;
+                            const isCC = payment.category?.name === 'Kredi Kartı Ödemesi' || payment._ccType;
+
+                            return (
+                              <tr key={payment._id || idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                <td className="px-3 py-2 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                  {dateFormatted}
+                                </td>
+                                <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{isCC ? '💳' : '📋'}</span>
+                                    <span>{payment.name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                                  {payment.category?.name || '-'}
+                                </td>
+                                <td className="px-3 py-2 font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
+                                  {(payment.effectiveAmount || payment.amount || 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+                                </td>
+                                <td className="px-3 py-2 text-right whitespace-nowrap">
+                                  <a
+                                    href={getGoogleCalendarUrl(payment)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 rounded font-medium text-[11px] transition-colors"
+                                  >
+                                    <span>+ Takvime Ekle</span>
+                                    <FiExternalLink className="h-3 w-3" />
+                                  </a>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
       )}
     </div>
   );

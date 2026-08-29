@@ -103,6 +103,7 @@ export default function Analysis() {
   const [showChartModal, setShowChartModal] = useState(false);
   const [showStartingCashDetails, setShowStartingCashDetails] = useState(false);
   const [columnDetailModal, setColumnDetailModal] = useState(null);
+  const [selectedRowDetail, setSelectedRowDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState({
@@ -552,6 +553,9 @@ export default function Analysis() {
                     </button>
                   </div>
                 </th>
+                <th className="whitespace-nowrap px-4 py-2 text-center text-xs font-medium text-gray-600 dark:text-gray-300">
+                  {t('details') || 'Detay'}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -582,6 +586,15 @@ export default function Analysis() {
                   </td>
                   <td className={`whitespace-nowrap px-4 py-2 text-right ${row.net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{fmt(row.net)}</td>
                   <td className={`whitespace-nowrap px-4 py-2 text-right ${cashColor(row.cash)}`}>{fmt(row.cash)}</td>
+                  <td className="whitespace-nowrap px-4 py-2 text-center">
+                    <button
+                      onClick={() => setSelectedRowDetail({ row, prevCash: index > 0 ? scenario.rows[index - 1].cash : scenario.summary.initialCash })}
+                      className="p-1.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors cursor-pointer inline-flex items-center justify-center"
+                      title={`${monthFormatter.format(row.date)} ${t('calculationDetails') || 'Hesaplama Detayı'}`}
+                    >
+                      <FiEye className="h-4 w-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1701,6 +1714,136 @@ export default function Analysis() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal for row calculation detail */}
+      <Modal
+        isOpen={!!selectedRowDetail}
+        onClose={() => setSelectedRowDetail(null)}
+        title={selectedRowDetail ? `${monthFormatter.format(selectedRowDetail.row.date)} - Hesaplama Detayı` : ''}
+        size="lg"
+      >
+        {selectedRowDetail && (() => {
+          const { row, prevCash } = selectedRowDetail;
+          const positivePlanned = row.planned > 0 ? row.planned : 0;
+          const negativePlanned = row.planned < 0 ? Math.abs(row.planned) : 0;
+          const futureLoanInflow = row.loanInflow || 0;
+          const totalInflow = row.income + positivePlanned + futureLoanInflow;
+          const totalOutflow = row.recurring + row.creditCard + row.loanPayment + negativePlanned;
+
+          return (
+            <div className="space-y-4 py-2 text-sm text-gray-700 dark:text-gray-200">
+              {/* Gelir ve Girişler */}
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                <h4 className="font-semibold text-emerald-800 dark:text-emerald-300 text-xs uppercase tracking-wider mb-2 flex justify-between items-center">
+                  <span>1. Gelirler & Nakit Girişleri (+)</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400 text-sm">+{fmt(totalInflow)}</span>
+                </h4>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between py-1 border-b border-emerald-100 dark:border-emerald-900/30">
+                    <span className="text-gray-600 dark:text-gray-400">Düzenli Gelir:</span>
+                    <span className="font-medium text-emerald-700 dark:text-emerald-400">+{fmt(row.income)}</span>
+                  </div>
+                  {positivePlanned > 0 && (
+                    <div className="flex justify-between py-1 border-b border-emerald-100 dark:border-emerald-900/30">
+                      <span className="text-gray-600 dark:text-gray-400">Planlanan Gelir İşlemi:</span>
+                      <span className="font-medium text-emerald-700 dark:text-emerald-400">+{fmt(positivePlanned)}</span>
+                    </div>
+                  )}
+                  {futureLoanInflow > 0 && (
+                    <div className="flex justify-between py-1 border-b border-emerald-100 dark:border-emerald-900/30">
+                      <span className="text-gray-600 dark:text-gray-400">Yeni Kredi Nakit Girişi:</span>
+                      <span className="font-medium text-emerald-700 dark:text-emerald-400">+{fmt(futureLoanInflow)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Giderler ve Çıkışlar */}
+              <div className="rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-900/40 dark:bg-red-950/20">
+                <h4 className="font-semibold text-red-800 dark:text-red-300 text-xs uppercase tracking-wider mb-2 flex justify-between items-center">
+                  <span>2. Giderler & Nakit Çıkışları (-)</span>
+                  <span className="font-bold text-red-700 dark:text-red-400 text-sm">-{fmt(totalOutflow)}</span>
+                </h4>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between py-1 border-b border-red-100 dark:border-red-900/30">
+                    <span className="text-gray-600 dark:text-gray-400">Sabit / Düzenli Giderler:</span>
+                    <span className="font-medium text-red-700 dark:text-red-400">-{fmt(row.recurring)}</span>
+                  </div>
+                  <div className="py-1 border-b border-red-100 dark:border-red-900/30">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Kredi Kartı Ödemesi:</span>
+                      <span className="font-medium text-red-700 dark:text-red-400">-{fmt(row.creditCard)}</span>
+                    </div>
+                    {row.creditCardStatement > 0 && (
+                      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 pl-2 border-l-2 border-red-300 dark:border-red-700">
+                        <span>Dönem Ekstre Borcu: <strong>{fmt(row.creditCardStatement)}</strong></span>
+                        {row.creditCardInterest > 0 && (
+                          <span className="ml-2 text-amber-600 dark:text-amber-400">(Devreden Akdi Faiz: +{fmt(row.creditCardInterest)})</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {row.loanPayment > 0 && (
+                    <div className="flex justify-between py-1 border-b border-red-100 dark:border-red-900/30">
+                      <span className="text-gray-600 dark:text-gray-400">Kredi Taksit Ödemeleri:</span>
+                      <span className="font-medium text-red-700 dark:text-red-400">-{fmt(row.loanPayment)}</span>
+                    </div>
+                  )}
+                  {negativePlanned > 0 && (
+                    <div className="flex justify-between py-1 border-b border-red-100 dark:border-red-900/30">
+                      <span className="text-gray-600 dark:text-gray-400">Planlanan Gider İşlemi:</span>
+                      <span className="font-medium text-red-700 dark:text-red-400">-{fmt(negativePlanned)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Aylık Net Değişim Özeti */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex justify-between items-center text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                  <span>3. Aylık Net Değişim (Girişler - Çıkışlar)</span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700 font-bold text-base">
+                  <span className="text-gray-800 dark:text-gray-100">Aylık Net Değişim:</span>
+                  <span className={row.net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
+                    {fmt(row.net)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Dönem Kasa Devri */}
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/30 space-y-1.5 text-xs">
+                <h4 className="font-semibold text-indigo-900 dark:text-indigo-300 text-xs uppercase tracking-wider mb-2">
+                  4. Kümülatif Kasa Rezervi Hesabı
+                </h4>
+                <div className="flex justify-between py-1 border-b border-indigo-100 dark:border-indigo-900/30">
+                  <span className="text-gray-600 dark:text-gray-400">Önceki Dönem Kasa Devri:</span>
+                  <span className={`font-medium ${cashColor(prevCash)}`}>{fmt(prevCash)}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-indigo-100 dark:border-indigo-900/30">
+                  <span className="text-gray-600 dark:text-gray-400">Bu Ayın Net Değişimi:</span>
+                  <span className={`font-medium ${row.net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {fmt(row.net)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2 font-bold text-base text-gray-900 dark:text-white">
+                  <span>Dönem Sonu Kasa Bakiyesi:</span>
+                  <span className={cashColor(row.cash)}>{fmt(row.cash)}</span>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => setSelectedRowDetail(null)}
+                  className="rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
+                >
+                  Kapat
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
     </div>
   );

@@ -567,18 +567,8 @@ export default function Analysis() {
                   <td className={`whitespace-nowrap px-4 py-2 text-right ${row.recurring > 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
                     {row.recurring > 0 ? fmt(-row.recurring) : fmt(0)}
                   </td>
-                  <td className={`whitespace-nowrap px-4 py-2 text-right ${row.creditCard > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                    <span className="block font-medium">{row.creditCard > 0 ? fmt(-row.creditCard) : fmt(0)}</span>
-                    {row.creditCardStatement > 0 && (
-                      <span className="block text-[10px] text-gray-400 dark:text-gray-500 font-normal">
-                        {t('statement') || 'Ekstre'}: {fmt(row.creditCardStatement)}
-                      </span>
-                    )}
-                    {row.creditCardInterest > 0 && (
-                      <span className="block text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                        Faiz: +{fmt(row.creditCardInterest)}
-                      </span>
-                    )}
+                  <td className={`whitespace-nowrap px-4 py-2 text-right ${row.creditCard > 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                    {row.creditCard > 0 ? fmt(-row.creditCard) : fmt(0)}
                   </td>
                   <td className={`whitespace-nowrap px-4 py-2 text-right ${row.planned >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`}>{fmt(row.planned)}</td>
                   <td className={`whitespace-nowrap px-4 py-2 text-right ${row.loanPayment > 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
@@ -1776,10 +1766,13 @@ export default function Analysis() {
                       <span className="font-medium text-red-700 dark:text-red-400">-{fmt(row.creditCard)}</span>
                     </div>
                     {row.creditCardStatement > 0 && (
-                      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 pl-2 border-l-2 border-red-300 dark:border-red-700">
-                        <span>Dönem Ekstre Borcu: <strong>{fmt(row.creditCardStatement)}</strong></span>
+                      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 pl-2 border-l-2 border-red-300 dark:border-red-700 space-y-0.5">
+                        <div>Dönem Ekstre Borcu: <strong>{fmt(row.creditCardStatement)}</strong></div>
+                        {row.installment > 0 && (
+                          <div className="text-purple-600 dark:text-purple-400 font-medium">(Dönem Taksit Yükü: +{fmt(row.installment)})</div>
+                        )}
                         {row.creditCardInterest > 0 && (
-                          <span className="ml-2 text-amber-600 dark:text-amber-400">(Devreden Akdi Faiz: +{fmt(row.creditCardInterest)})</span>
+                          <div className="text-amber-600 dark:text-amber-400">(Devreden Akdi Faiz: +{fmt(row.creditCardInterest)})</div>
                         )}
                       </div>
                     )}

@@ -203,9 +203,23 @@ const projectRecurringPayments = (payments, monthDate, settings = {}, flatAverag
 const projectInstallments = (installments, monthDate) =>
   installments.reduce((sum, installment) => {
     if (installment.paymentStatus && installment.paymentStatus !== 'active') return sum;
-    if (!installment.nextPaymentDate || !installment.remainingInstallments) return sum;
+    const dateRaw = installment.nextPaymentDate || installment.firstPaymentDate;
+    if (!dateRaw || !installment.remainingInstallments) return sum;
 
-    const firstPayment = startOfMonth(new Date(installment.nextPaymentDate));
+    let parsedDate;
+    if (typeof dateRaw === 'string') {
+      const datePart = dateRaw.split('T')[0];
+      const [year, month, day] = datePart.split('-').map(Number);
+      if (year && month) {
+        parsedDate = new Date(year, month - 1, day || 1);
+      } else {
+        parsedDate = new Date(dateRaw);
+      }
+    } else {
+      parsedDate = new Date(dateRaw);
+    }
+
+    const firstPayment = startOfMonth(parsedDate);
     for (let i = 0; i < toNumber(installment.remainingInstallments); i += 1) {
       if (isSameMonth(addMonths(firstPayment, i), monthDate)) {
         return sum + toNumber(installment.installmentAmount);

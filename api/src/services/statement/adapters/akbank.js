@@ -108,9 +108,9 @@ module.exports.parse = (text) => {
     const isCredit = suffix.length > 0 && !/^[ðñòóôõö÷øùk]/.test(suffix);
     const amount   = parseTR(rawAmt);
     if (isNaN(amount) || amount <= 0) continue;
-    const instMatch = rawDesc.match(installmentRe);  // encoded text üzerinde eşle
-    const current   = instMatch ? parseInt(decodeDigits(instMatch[1])) : null;
-    const total     = instMatch ? parseInt(decodeDigits(instMatch[2])) : null;
+    const instMatch = rawDesc.match(installmentRe);  // encoded text üzerinde eşle (Akbank formatı: [Toplam]/[Mevcut])
+    const total     = instMatch ? parseInt(decodeDigits(instMatch[1])) : null;
+    const current   = instMatch ? parseInt(decodeDigits(instMatch[2])) : null;
     const isInstallment = !!(instMatch && current > 0 && total > 1 && current <= total);
     transactions.push({
       date,

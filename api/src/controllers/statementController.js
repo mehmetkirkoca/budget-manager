@@ -71,29 +71,33 @@ const importStatement = async (request, reply) => {
   if (transactions.length > 0) card.lastStatementTransactions = transactions;
   await card.save();
 
-  // Auto-create installment records for taksit transactions
+  // Auto-create or update installment records for taksit transactions
   let installmentsCreated = 0;
+  let installmentsUpdated = 0;
   const dueDate = card.nextPaymentDue ? new Date(card.nextPaymentDue) : new Date();
+
+  // Determine current statement period (e.g. "2026-08")
+  const refDate = statementDate || paymentDueDate;
+  const currentStatementPeriod = refDate
+    ? new Date(refDate).toISOString().slice(0, 7)
+    : new Date().toISOString().slice(0, 7);
 
   for (const txn of installmentTransactions) {
     if (!txn.isInstallment || !txn.installmentInfo) continue;
     const { current, total } = txn.installmentInfo;
     if (!current || !total || total < 2 || current > total) continue;
 
-    // Skip if same installment plan already tracked
-    const exists = await CreditCardInstallment.findOne({
+    // Check if an installment plan with this description and total installments exists
+    const existing = await CreditCardInstallment.findOne({
       creditCard: id,
       purchaseDescription: txn.description,
       totalInstallments: total,
-      paymentStatus: { $in: ['active', 'completed'] },
     });
-    if (exists) continue;
 
-    // Estimate dates:
-    // nextPaymentDate  = card's current due date
-    // firstPaymentDate = dueDate - (current - 1) months
-    // purchaseDate     = firstPaymentDate - 1 month
-    // lastPaymentDate  = firstPaymentDate + (total - 1) months
+    const completedInstallments = current - 1; // current one is billed in this statement
+    const remainingInstallments = Math.max(0, total - completedInstallments);
+    const originalAmount = Math.round(txn.amount * total * 100) / 100;
+
     const firstPaymentDate = new Date(dueDate);
     firstPaymentDate.setMonth(firstPaymentDate.getMonth() - (current - 1));
 
@@ -103,30 +107,46 @@ const importStatement = async (request, reply) => {
     const lastPaymentDate = new Date(firstPaymentDate);
     lastPaymentDate.setMonth(lastPaymentDate.getMonth() + total - 1);
 
-    const originalAmount      = Math.round(txn.amount * total * 100) / 100;
-    const completedInstallments = current - 1; // current one is in this statement, not yet paid
+    if (existing) {
+      // Re-upload prevention: if this exact statement period was ALREADY processed for this installment, skip duplicate
+      if (existing.lastProcessedPeriod === currentStatementPeriod) {
+        continue;
+      }
 
-    await CreditCardInstallment.create({
-      creditCard:           id,
-      purchaseDescription:  txn.description,
-      originalAmount,
-      totalInstallments:    total,
-      installmentAmount:    txn.amount,
-      completedInstallments,
-      remainingInstallments: total - completedInstallments,
-      totalAmountWithInterest: originalAmount,
-      interestRate:         0,
-      interestAmount:       0,
-      purchaseDate,
-      firstPaymentDate,
-      nextPaymentDate:      dueDate,
-      lastPaymentDate,
-      paymentStatus:        completedInstallments >= total ? 'completed' : 'active',
-    });
-    installmentsCreated++;
+      // Update existing installment record to reflect latest statement status
+      existing.completedInstallments = completedInstallments;
+      existing.remainingInstallments = remainingInstallments;
+      existing.installmentAmount = txn.amount;
+      existing.nextPaymentDate = dueDate;
+      existing.paymentStatus = completedInstallments >= total ? 'completed' : 'active';
+      existing.lastProcessedPeriod = currentStatementPeriod;
+      await existing.save();
+      installmentsUpdated++;
+    } else {
+      // Create new installment record
+      await CreditCardInstallment.create({
+        creditCard: id,
+        purchaseDescription: txn.description,
+        originalAmount,
+        totalInstallments: total,
+        installmentAmount: txn.amount,
+        completedInstallments,
+        remainingInstallments,
+        totalAmountWithInterest: originalAmount,
+        interestRate: 0,
+        interestAmount: 0,
+        purchaseDate,
+        firstPaymentDate,
+        nextPaymentDate: dueDate,
+        lastPaymentDate,
+        paymentStatus: completedInstallments >= total ? 'completed' : 'active',
+        lastProcessedPeriod: currentStatementPeriod,
+      });
+      installmentsCreated++;
+    }
   }
 
-  reply.send({ success: true, cardUpdated: true, installmentsCreated });
+  reply.send({ success: true, cardUpdated: true, installmentsCreated, installmentsUpdated });
 };
 
 module.exports = { parseStatementUpload, importStatement };

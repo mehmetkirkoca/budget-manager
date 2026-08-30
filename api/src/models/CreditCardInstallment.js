@@ -79,6 +79,10 @@ const creditCardInstallmentSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  lastProcessedPeriod: {
+    type: String,
+    default: null
+  },
   paymentStatus: {
     type: String,
     enum: ['active', 'completed', 'paused', 'defaulted'],

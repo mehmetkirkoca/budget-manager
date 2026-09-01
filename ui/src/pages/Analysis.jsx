@@ -14,6 +14,8 @@ import {
   FiTrash2,
   FiTrendingDown,
   FiTrendingUp,
+  FiChevronDown,
+  FiChevronUp,
 } from 'react-icons/fi';
 import {
   ResponsiveContainer,
@@ -104,6 +106,11 @@ export default function Analysis() {
   const [showStartingCashDetails, setShowStartingCashDetails] = useState(false);
   const [columnDetailModal, setColumnDetailModal] = useState(null);
   const [selectedRowDetail, setSelectedRowDetail] = useState(null);
+  const [accordionOpen, setAccordionOpen] = useState({
+    recurring: true,
+    creditCard: true,
+    loan: true,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState({
@@ -252,6 +259,63 @@ export default function Analysis() {
       ...current,
       plannedTransactions: [...current.plannedTransactions, newTx],
     }));
+  };
+
+  const autoBalanceWithGoldSales = () => {
+    if (!settings || !data) return;
+    const baseTx = (settings.plannedTransactions || []).filter(tx => !tx.label?.includes('Altın Satışı'));
+    const baseSettings = { ...settings, plannedTransactions: baseTx };
+    const sim = buildScenario({ ...data, settings: baseSettings });
+
+    // Dynamically get live gold price per gram strictly from system assets
+    const goldAsset = (data?.assets || []).find(a => a.assetType === 'gold' && numberValue(a.conversionRate) > 0)
+      || (data?.assets || []).find(a => a.assetType === 'gold' && numberValue(a.currentAmount) > 0)
+      || (data?.assets || []).find(a => (a.assetType === 'gold' || a.unit === 'gr'));
+
+    let goldGramPrice = 0;
+    if (goldAsset) {
+      if (numberValue(goldAsset.conversionRate) > 0) {
+        goldGramPrice = numberValue(goldAsset.conversionRate);
+      } else if (numberValue(goldAsset.currentAmount) > 0 && numberValue(goldAsset.currentValueTRY) > 0) {
+        goldGramPrice = numberValue(goldAsset.currentValueTRY) / numberValue(goldAsset.currentAmount);
+      }
+    }
+
+    if (!goldGramPrice || goldGramPrice <= 0) {
+      const anyGoldRateAsset = (data?.assets || []).find(a => numberValue(a.conversionRate) > 0 && (a.assetType === 'gold' || a.unit === 'gr'));
+      if (anyGoldRateAsset) {
+        goldGramPrice = numberValue(anyGoldRateAsset.conversionRate);
+      }
+    }
+
+    const goldName = goldAsset?.name ? goldAsset.name.replace(' (Garanti)', '').replace(' (Enpara)', '') : 'Altın';
+
+    const newPlanned = [...baseTx];
+    let currentCumulativeBoost = 0;
+
+    (sim.rows || []).forEach(row => {
+      const effectiveCash = row.cash + currentCumulativeBoost;
+      if (effectiveCash < 0) {
+        const neededIncome = Math.ceil(Math.abs(effectiveCash));
+        const estimatedGram = goldGramPrice > 0 ? (neededIncome / goldGramPrice).toFixed(2) : null;
+        const label = estimatedGram ? `Altın Satışı (~${estimatedGram} gr ${goldName})` : 'Altın Satışı (Bakiye Dengesi)';
+        
+        newPlanned.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          label,
+          amount: neededIncome,
+          direction: 'income',
+          month: row.key,
+          startMonth: row.key,
+          endMonth: '',
+          repeats: false,
+          enabled: true,
+        });
+        currentCumulativeBoost += neededIncome;
+      }
+    });
+
+    updateSettings({ plannedTransactions: newPlanned });
   };
 
   const toggleLiquidAsset = id => {
@@ -1013,17 +1077,32 @@ export default function Analysis() {
 
             {activeTab === 'planned' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between border-b pb-2 mb-3">
-                  <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                    {t('plannedTransactions')}
-                  </h4>
-                  <button
-                    onClick={addTransaction}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 transition-colors"
-                  >
-                    <FiPlus className="h-3.5 w-3.5" />
-                    {t('add')}
-                  </button>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2 mb-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                      {t('plannedTransactions')}
+                    </h4>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      Ek gelir/gider ekleyebilir veya bakiyenizi eksiye düşmeyecek şekilde altın satışı ile dengeleyebilirsiniz.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={autoBalanceWithGoldSales}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition-colors shadow-sm cursor-pointer"
+                      title="Nakit bakiyesi eksiye düşen aylarda altın satışı kaynaklı planlı gelir ekler"
+                    >
+                      <FiDollarSign className="h-3.5 w-3.5" />
+                      Altın Satışı İle Açık Kapat (Otomatik)
+                    </button>
+                    <button
+                      onClick={addTransaction}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 text-xs font-medium text-white transition-colors cursor-pointer"
+                    >
+                      <FiPlus className="h-3.5 w-3.5" />
+                      {t('add')}
+                    </button>
+                  </div>
                 </div>
                 {settings.plannedTransactions.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">{t('noPlannedTransactions')}</p>
@@ -1724,69 +1803,131 @@ export default function Analysis() {
           return (
             <div className="space-y-4 py-2 text-sm text-gray-700 dark:text-gray-200">
               {/* Gelir ve Girişler */}
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                <h4 className="font-semibold text-emerald-800 dark:text-emerald-300 text-xs uppercase tracking-wider mb-2 flex justify-between items-center">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3.5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                <h4 className="font-bold text-emerald-800 dark:text-emerald-300 text-xs sm:text-sm uppercase tracking-wider mb-2 flex justify-between items-center">
                   <span>1. Gelirler & Nakit Girişleri (+)</span>
-                  <span className="font-bold text-emerald-700 dark:text-emerald-400 text-sm">+{fmt(totalInflow)}</span>
+                  <span className="font-extrabold text-emerald-700 dark:text-emerald-400 text-base">+{fmt(totalInflow)}</span>
                 </h4>
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1.5 text-xs sm:text-sm">
                   <div className="flex justify-between py-1 border-b border-emerald-100 dark:border-emerald-900/30">
-                    <span className="text-gray-600 dark:text-gray-400">Düzenli Gelir:</span>
-                    <span className="font-medium text-emerald-700 dark:text-emerald-400">+{fmt(row.income)}</span>
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">Düzenli Gelir:</span>
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">+{fmt(row.income)}</span>
                   </div>
                   {positivePlanned > 0 && (
                     <div className="flex justify-between py-1 border-b border-emerald-100 dark:border-emerald-900/30">
-                      <span className="text-gray-600 dark:text-gray-400">Planlanan Gelir İşlemi:</span>
-                      <span className="font-medium text-emerald-700 dark:text-emerald-400">+{fmt(positivePlanned)}</span>
+                      <span className="text-gray-600 dark:text-gray-400 font-medium">Planlanan Gelir İşlemi:</span>
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-400">+{fmt(positivePlanned)}</span>
                     </div>
                   )}
                   {futureLoanInflow > 0 && (
                     <div className="flex justify-between py-1 border-b border-emerald-100 dark:border-emerald-900/30">
-                      <span className="text-gray-600 dark:text-gray-400">Yeni Kredi Nakit Girişi:</span>
-                      <span className="font-medium text-emerald-700 dark:text-emerald-400">+{fmt(futureLoanInflow)}</span>
+                      <span className="text-gray-600 dark:text-gray-400 font-medium">Yeni Kredi Nakit Girişi:</span>
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-400">+{fmt(futureLoanInflow)}</span>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Giderler ve Çıkışlar */}
-              <div className="rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-900/40 dark:bg-red-950/20">
-                <h4 className="font-semibold text-red-800 dark:text-red-300 text-xs uppercase tracking-wider mb-2 flex justify-between items-center">
+              <div className="rounded-lg border border-red-200 bg-red-50/50 p-3.5 dark:border-red-900/40 dark:bg-red-950/20">
+                <h4 className="font-bold text-red-800 dark:text-red-300 text-xs sm:text-sm uppercase tracking-wider mb-2.5 flex justify-between items-center">
                   <span>2. Giderler & Nakit Çıkışları (-)</span>
-                  <span className="font-bold text-red-700 dark:text-red-400 text-sm">-{fmt(totalOutflow)}</span>
+                  <span className="font-extrabold text-red-700 dark:text-red-400 text-base">-{fmt(totalOutflow)}</span>
                 </h4>
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between py-1 border-b border-red-100 dark:border-red-900/30">
-                    <span className="text-gray-600 dark:text-gray-400">Sabit / Düzenli Giderler:</span>
-                    <span className="font-medium text-red-700 dark:text-red-400">-{fmt(row.recurring)}</span>
-                  </div>
-                  <div className="py-1 border-b border-red-100 dark:border-red-900/30">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Kredi Kartı Ödemesi:</span>
-                      <span className="font-medium text-red-700 dark:text-red-400">-{fmt(row.creditCard)}</span>
+                <div className="space-y-2 text-xs sm:text-sm">
+                  <div className="py-1.5 border-b border-red-100 dark:border-red-900/30">
+                    <div
+                      className="flex justify-between items-center cursor-pointer select-none hover:opacity-85 transition-opacity"
+                      onClick={() => setAccordionOpen(prev => ({ ...prev, recurring: !prev.recurring }))}
+                    >
+                      <span className="text-gray-700 dark:text-gray-300 font-bold flex items-center gap-1.5">
+                        {accordionOpen.recurring ? <FiChevronUp className="w-4 h-4 text-red-500 flex-shrink-0" /> : <FiChevronDown className="w-4 h-4 text-red-500 flex-shrink-0" />}
+                        <span>Sabit / Düzenli Giderler (Kredi & Taksit Kalemleri)</span>
+                      </span>
+                      <span className="font-bold text-red-700 dark:text-red-400 text-sm sm:text-base ml-2">-{fmt(row.recurring)}</span>
                     </div>
-                    {row.creditCardStatement > 0 && (
-                      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 pl-2 border-l-2 border-red-300 dark:border-red-700 space-y-0.5">
-                        <div>Dönem Ekstre Borcu: <strong>{fmt(row.creditCardStatement)}</strong></div>
-                        {row.installment > 0 && (
-                          <div className="text-purple-600 dark:text-purple-400 font-medium">(Dönem Taksit Yükü: +{fmt(row.installment)})</div>
-                        )}
-                        {row.creditCardInterest > 0 && (
-                          <div className="text-amber-600 dark:text-amber-400">(Devreden Akdi Faiz: +{fmt(row.creditCardInterest)})</div>
-                        )}
+                    {accordionOpen.recurring && row.recurringItems && row.recurringItems.length > 0 && (
+                      <div className="mt-2 text-xs sm:text-sm text-gray-700 dark:text-gray-200 pl-3 border-l-3 border-red-400 dark:border-red-600 space-y-1.5 bg-red-100/40 dark:bg-red-900/20 p-2.5 rounded-lg">
+                        {row.recurringItems.map((item, idx) => (
+                          <div key={item.id || idx} className="flex justify-between items-center">
+                            <span className="flex items-center gap-2 font-medium">
+                              <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span>
+                              <span className="font-semibold text-gray-800 dark:text-gray-100">{item.name}</span>
+                              {item.categoryName && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({item.categoryName})</span>
+                              )}
+                            </span>
+                            <span className="font-bold text-red-600 dark:text-red-400 text-xs sm:text-sm">-{fmt(item.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="py-1.5 border-b border-red-100 dark:border-red-900/30">
+                    <div
+                      className="flex justify-between items-center cursor-pointer select-none hover:opacity-85 transition-opacity"
+                      onClick={() => setAccordionOpen(prev => ({ ...prev, creditCard: !prev.creditCard }))}
+                    >
+                      <span className="text-gray-700 dark:text-gray-300 font-bold flex items-center gap-1.5">
+                        {accordionOpen.creditCard ? <FiChevronUp className="w-4 h-4 text-red-500 flex-shrink-0" /> : <FiChevronDown className="w-4 h-4 text-red-500 flex-shrink-0" />}
+                        <span>Kredi Kartı Ödemeleri (Kart Bazında Detay)</span>
+                      </span>
+                      <span className="font-bold text-red-700 dark:text-red-400 text-sm sm:text-base ml-2">-{fmt(row.creditCard)}</span>
+                    </div>
+                    {accordionOpen.creditCard && row.creditCardBreakdown && row.creditCardBreakdown.length > 0 && (
+                      <div className="mt-2 text-xs sm:text-sm text-gray-700 dark:text-gray-200 pl-3 border-l-3 border-red-400 dark:border-red-600 space-y-2 bg-red-100/40 dark:bg-red-900/20 p-2.5 rounded-lg">
+                        {row.creditCardBreakdown.map((card, idx) => (
+                          <div key={card.id || idx} className="space-y-0.5 border-b border-red-200/50 dark:border-red-800/30 pb-1.5 last:border-b-0 last:pb-0">
+                            <div className="flex justify-between items-center">
+                              <span className="flex items-center gap-2 font-semibold text-gray-800 dark:text-gray-100">
+                                <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span>
+                                <span>{card.bankName} - {card.name}</span>
+                              </span>
+                              <span className="font-bold text-red-600 dark:text-red-400 text-xs sm:text-sm">-{fmt(card.payment)}</span>
+                            </div>
+                            <div className="flex justify-between text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 pl-4">
+                              <span>Dönem Ekstre Borcu: {fmt(card.statement)}</span>
+                              {card.interest > 0 && (
+                                <span className="text-amber-600 dark:text-amber-400">(Devreden Faiz: +{fmt(card.interest)})</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
                   {row.loanPayment > 0 && (
-                    <div className="flex justify-between py-1 border-b border-red-100 dark:border-red-900/30">
-                      <span className="text-gray-600 dark:text-gray-400">Kredi Taksit Ödemeleri:</span>
-                      <span className="font-medium text-red-700 dark:text-red-400">-{fmt(row.loanPayment)}</span>
+                    <div className="py-1.5 border-b border-red-100 dark:border-red-900/30">
+                      <div
+                        className="flex justify-between items-center cursor-pointer select-none hover:opacity-85 transition-opacity"
+                        onClick={() => setAccordionOpen(prev => ({ ...prev, loan: !prev.loan }))}
+                      >
+                        <span className="text-gray-700 dark:text-gray-300 font-bold flex items-center gap-1.5">
+                          {accordionOpen.loan ? <FiChevronUp className="w-4 h-4 text-indigo-500 flex-shrink-0" /> : <FiChevronDown className="w-4 h-4 text-indigo-500 flex-shrink-0" />}
+                          <span>Kredi Senaryosu Taksit Ödemeleri</span>
+                        </span>
+                        <span className="font-bold text-red-700 dark:text-red-400 text-sm sm:text-base ml-2">-{fmt(row.loanPayment)}</span>
+                      </div>
+                      {accordionOpen.loan && row.loanBreakdown && row.loanBreakdown.length > 0 && (
+                        <div className="mt-2 text-xs sm:text-sm text-gray-700 dark:text-gray-200 pl-3 border-l-3 border-indigo-400 dark:border-indigo-600 space-y-1.5 bg-indigo-50/50 dark:bg-indigo-950/30 p-2.5 rounded-lg">
+                          {row.loanBreakdown.map((item, idx) => (
+                            <div key={item.id || idx} className="flex justify-between items-center">
+                              <span className="flex items-center gap-2 font-medium">
+                                <span className="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0"></span>
+                                <span className="font-semibold text-gray-800 dark:text-gray-100">{item.name}</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">({item.monthIndex}/{item.term} Taksit)</span>
+                              </span>
+                              <span className="font-bold text-red-600 dark:text-red-400 text-xs sm:text-sm">-{fmt(item.payment)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                   {negativePlanned > 0 && (
-                    <div className="flex justify-between py-1 border-b border-red-100 dark:border-red-900/30">
-                      <span className="text-gray-600 dark:text-gray-400">Planlanan Gider İşlemi:</span>
-                      <span className="font-medium text-red-700 dark:text-red-400">-{fmt(negativePlanned)}</span>
+                    <div className="flex justify-between py-1.5 border-b border-red-100 dark:border-red-900/30">
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">Planlanan Gider İşlemi:</span>
+                      <span className="font-bold text-red-700 dark:text-red-400">-{fmt(negativePlanned)}</span>
                     </div>
                   )}
                 </div>

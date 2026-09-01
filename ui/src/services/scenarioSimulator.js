@@ -148,18 +148,13 @@ export const calculateFlatAverage = (payment, settings = {}) => {
 
 const projectRecurringPayments = (payments, monthDate, settings = {}, flatAverages = null) => {
   const mode = settings.recurringPaymentsMode || 'monthlyEquivalent';
-  if (mode === 'ignore') return 0;
+  if (mode === 'ignore') return { total: 0, items: [] };
 
-  if (mode === 'monthlyEquivalent' && flatAverages) {
-    const total = payments.reduce((sum, payment) => {
-      if (payment.isActive === false) return sum;
-      return sum + (flatAverages[payment._id] || 0);
-    }, 0);
-    return total;
-  }
+  const items = [];
+  let total = 0;
 
-  const total = payments.reduce((sum, payment) => {
-    if (payment.isActive === false) return sum;
+  payments.forEach(payment => {
+    if (payment.isActive === false) return;
 
     const startsOn = payment.startDate;
     const endsOn = payment.endDate;
@@ -171,33 +166,47 @@ const projectRecurringPayments = (payments, monthDate, settings = {}, flatAverag
       const currentYear = monthDate.getFullYear();
       const currentMonth = monthDate.getMonth();
       if ((currentYear - startYear) * 12 + (currentMonth - startMonth) < 0) {
-        return sum;
+        return;
       }
     }
 
     if (endsOn) {
       const end = new Date(endsOn);
       if (end < monthDate) {
-        return sum;
+        return;
       }
     }
 
-    const amount = toNumber(payment.amountInfo?.effectiveAmount || payment.calculatedAmount || payment.amount);
+    const rawAmount = toNumber(payment.amountInfo?.effectiveAmount || payment.calculatedAmount || payment.amount);
+    let itemAmount = 0;
 
     if (mode === 'monthlyEquivalent') {
-      return sum + getMonthlyEquivalentForPayment(payment, amount);
+      itemAmount = flatAverages && flatAverages[payment._id] !== undefined
+        ? flatAverages[payment._id]
+        : getMonthlyEquivalentForPayment(payment, rawAmount);
     } else {
       // mode === 'dueMonth'
       if (payment.frequency === 'weekly') {
-        return sum + (amount * 4.33); // Weekly occurs every month, use its monthly equivalent
+        itemAmount = rawAmount * 4.33;
+      } else {
+        const isDue = isPaymentDueInMonth(payment, monthDate);
+        itemAmount = isDue ? rawAmount : 0;
       }
-      const isDue = isPaymentDueInMonth(payment, monthDate);
-      return isDue ? sum + amount : sum;
     }
-  }, 0);
 
-  console.log(`[scenarioSimulator.js] projectRecurringPayments: Ay = ${monthDate.toISOString().substring(0, 7)}, Mod = ${mode}, Toplam = ${total}`);
-  return total;
+    if (itemAmount > 0) {
+      total += itemAmount;
+      items.push({
+        id: payment._id,
+        name: payment.name,
+        categoryName: payment.category?.name || '',
+        amount: itemAmount,
+        frequency: payment.frequency,
+      });
+    }
+  });
+
+  return { total, items };
 };
 
 const projectInstallments = (installments, monthDate) =>
@@ -377,48 +386,81 @@ export const buildScenario = ({
     });
   }
 
-  const initialCardBalance = creditCards.reduce((sum, card) => sum + toNumber(card.currentBalance), 0);
-  let cardBalance = initialCardBalance;
-
   // Calculate weighted monthly contractual interest rate from cards or use TCMB default (4.25%)
   const totalCardBalanceForRate = creditCards.reduce((sum, c) => sum + toNumber(c.currentBalance), 0);
   const averageMonthlyCardRate = totalCardBalanceForRate > 0
     ? creditCards.reduce((sum, c) => sum + (toNumber(c.currentBalance) * (toNumber(c.interestRate?.monthly) || 0.0425)), 0) / totalCardBalanceForRate
     : (creditCards.map(c => toNumber(c.interestRate?.monthly)).find(r => r > 0) || 0.0425);
 
+  // Track individual card balances per card
+  const cardStates = creditCards.map(c => ({
+    id: c._id,
+    name: c.name,
+    bankName: c.bankName,
+    balance: toNumber(c.currentBalance),
+    rate: toNumber(c.interestRate?.monthly) || 0.0425,
+    minRate: toNumber(c.minimumPaymentRate) || 0.03,
+  }));
+
   for (let index = 0; index < horizonMonths; index += 1) {
     const date = addMonths(startDate, index);
     const income = projectIncomes(incomes, date);
-    const recurring = projectRecurringPayments(recurringPayments, date, settings, flatAverages);
+    const recurringRes = projectRecurringPayments(recurringPayments, date, settings, flatAverages);
+    const recurring = typeof recurringRes === 'object' ? recurringRes.total : recurringRes;
+    const recurringItems = typeof recurringRes === 'object' ? recurringRes.items : [];
     const installment = projectInstallments(installments, date);
     
-    // Credit card statement and payment calculations
-    let creditCardPayment = 0;
-    const statementBalance = cardBalance + installment;
+    // Per-card credit card calculations
     const strategy = settings.creditCardStrategy || 'minimum';
-
-    if (strategy !== 'none' && statementBalance > 0) {
-      if (strategy === 'full') {
-        creditCardPayment = statementBalance;
-      } else if (strategy === 'fixed') {
-        const fixed = toNumber(settings.fixedCreditCardPayment);
-        creditCardPayment = Math.min(fixed, statementBalance);
-      } else {
-        // strategy === 'minimum'
-        const minimumRate = toNumber(settings.minimumPaymentRate) || 0.03;
-        creditCardPayment = statementBalance * minimumRate;
-      }
-    }
-
-    const unpaidBalance = Math.max(0, statementBalance - creditCardPayment);
+    let creditCardPayment = 0;
+    let statementBalance = 0;
     let cardInterest = 0;
-    if (unpaidBalance > 0 && strategy !== 'full') {
-      // Contractual interest + 15% KKDF + 5% BSMV = averageMonthlyCardRate * 1.20
-      const effectiveRate = averageMonthlyCardRate * 1.20;
-      cardInterest = unpaidBalance * effectiveRate;
-    }
+    let cardRemaining = 0;
+    const creditCardBreakdown = [];
 
-    cardBalance = unpaidBalance + cardInterest;
+    cardStates.forEach(card => {
+      const cardStatement = card.balance;
+      let cardPayment = 0;
+
+      if (strategy !== 'none' && cardStatement > 0) {
+        if (strategy === 'full') {
+          cardPayment = cardStatement;
+        } else if (strategy === 'fixed') {
+          const fixedPerCard = toNumber(settings.fixedCreditCardPayment) / Math.max(1, cardStates.length);
+          cardPayment = Math.min(fixedPerCard, cardStatement);
+        } else {
+          // strategy === 'minimum'
+          const rateToUse = (settings.minimumPaymentRate && Number(settings.minimumPaymentRate) > 0)
+            ? toNumber(settings.minimumPaymentRate)
+            : card.minRate;
+          cardPayment = cardStatement * rateToUse;
+        }
+      }
+
+      const cardUnpaid = Math.max(0, cardStatement - cardPayment);
+      let cardInterestAmt = 0;
+      if (cardUnpaid > 0 && strategy !== 'full') {
+        const effectiveRate = card.rate * 1.20;
+        cardInterestAmt = cardUnpaid * effectiveRate;
+      }
+
+      card.balance = cardUnpaid + cardInterestAmt;
+
+      creditCardPayment += cardPayment;
+      statementBalance += cardStatement;
+      cardInterest += cardInterestAmt;
+      cardRemaining += card.balance;
+
+      creditCardBreakdown.push({
+        id: card.id,
+        name: card.name,
+        bankName: card.bankName,
+        statement: cardStatement,
+        payment: cardPayment,
+        interest: cardInterestAmt,
+        remaining: card.balance,
+      });
+    });
 
     const planned = projectPlannedTransactions(plannedTransactions, date);
     const loanEffect = loansEffectForMonth(loans, date);
@@ -432,11 +474,13 @@ export const buildScenario = ({
       date,
       income,
       recurring,
+      recurringItems,
       installment,
       creditCard: creditCardPayment,
       creditCardStatement: statementBalance,
       creditCardInterest: cardInterest,
-      creditCardRemaining: cardBalance,
+      creditCardRemaining: cardRemaining,
+      creditCardBreakdown,
       planned,
       loanInflow: loanEffect.inflow,
       loanPayment: loanEffect.payment,

@@ -20,7 +20,7 @@ async function exportRoutes(fastify, options) {
         properties: {
           collection: {
             type: 'string',
-            enum: ['categories', 'expenses', 'incomes', 'assets', 'recurring-payments', 'credit-cards', 'installments']
+            enum: ['categories', 'expenses', 'incomes', 'assets', 'recurring-payments', 'credit-cards', 'installments', 'notes']
           }
         },
         required: ['collection']

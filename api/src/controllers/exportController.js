@@ -6,6 +6,7 @@ const Asset = require('../models/Asset');
 const RecurringPayment = require('../models/RecurringPayment');
 const CreditCard = require('../models/CreditCard');
 const CreditCardInstallment = require('../models/CreditCardInstallment');
+const Note = require('../models/Note');
 
 // Export all data as JSON
 const exportAllData = async (request, reply) => {
@@ -48,6 +49,10 @@ const exportAllData = async (request, reply) => {
       .lean();
     exportData.data.creditCardInstallments = installments;
 
+    // Export notes
+    const notes = await Note.find().lean();
+    exportData.data.notes = notes;
+
     // Calculate summary statistics
     exportData.summary = {
       categoriesCount: categories.length,
@@ -57,6 +62,7 @@ const exportAllData = async (request, reply) => {
       recurringPaymentsCount: recurringPayments.length,
       creditCardsCount: creditCards.length,
       installmentsCount: installments.length,
+      notesCount: notes.length,
       totalExpenseAmount: expenses.reduce((sum, exp) => sum + exp.amount, 0),
       totalIncomeAmount: incomes.reduce((sum, inc) => sum + inc.amount, 0),
       totalAssetValue: assets.reduce((sum, asset) => sum + asset.currentAmount, 0)
@@ -117,6 +123,10 @@ const exportCollection = async (request, reply) => {
           .populate('category', 'name')
           .lean();
         filename = 'installments';
+        break;
+      case 'notes':
+        data = await Note.find().lean();
+        filename = 'notes';
         break;
       default:
         return reply.status(400).send({ 
@@ -241,7 +251,8 @@ const getExportSummary = async (request, reply) => {
       { name: 'assets', model: Asset, filter: {} },
       { name: 'recurringPayments', model: RecurringPayment, filter: { isActive: true } },
       { name: 'creditCards', model: CreditCard, filter: { isActive: true } },
-      { name: 'creditCardInstallments', model: CreditCardInstallment, filter: {} }
+      { name: 'creditCardInstallments', model: CreditCardInstallment, filter: {} },
+      { name: 'notes', model: Note, filter: {} }
     ];
 
     for (const collection of collections) {

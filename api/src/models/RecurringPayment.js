@@ -33,6 +33,18 @@ const recurringPaymentSchema = new mongoose.Schema({
   endDate: {
     type: Date // Optional, if payment has an end date
   },
+  totalInstallments: {
+    type: Number,
+    min: 1
+  },
+  remainingInstallments: {
+    type: Number,
+    min: 0
+  },
+  totalAmount: {
+    type: Number,
+    min: 0
+  },
   dayOfMonth: {
     type: Number,
     min: 1,

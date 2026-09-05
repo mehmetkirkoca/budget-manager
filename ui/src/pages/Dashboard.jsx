@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import SummaryCard from '../components/SummaryCard';
@@ -107,6 +107,39 @@ const Dashboard = () => {
     }
   };
   
+  const netLiquidityBalance = useMemo(() => {
+    const totalAssetsVal = assetData.reduce((s, a) => s + (a.currentValueTRY || a.currentAmount || 0), 0);
+    const totalCardDebtVal = creditCardsData.reduce((s, c) => {
+      const usedLimit = (c.totalLimit !== undefined && c.availableLimit !== undefined)
+        ? Math.max(0, c.totalLimit - c.availableLimit)
+        : 0;
+      return s + Math.max(c.currentBalance || 0, usedLimit);
+    }, 0);
+    const loanPaymentsList = recurringPaymentsData.filter(p => {
+      if (p.isActive === false) return false;
+      const catName = (p.category?.name || '').toLowerCase();
+      const name = (p.name || '').toLowerCase();
+      return (catName.includes('kredi') || name.includes('kredi')) && !catName.includes('kredi kartı') && !name.includes('kredi kartı');
+    });
+
+    const getLoanTotalDebt = p => {
+      if (p.totalAmount && p.totalAmount > 0) return p.totalAmount;
+      if (p.remainingInstallments !== undefined && p.remainingInstallments > 0) {
+        return (p.amount || 0) * p.remainingInstallments;
+      }
+      if (p.endDate) {
+        const now = new Date();
+        const end = new Date(p.endDate);
+        const remainingMonths = Math.max(1, (end.getFullYear() - now.getFullYear()) * 12 + (end.getMonth() - now.getMonth()));
+        return (p.amount || 0) * remainingMonths;
+      }
+      return (p.amount || 0) * 12;
+    };
+
+    const totalLoanDebtVal = loanPaymentsList.reduce((s, p) => s + getLoanTotalDebt(p), 0);
+    return totalAssetsVal - totalCardDebtVal - totalLoanDebtVal;
+  }, [assetData, creditCardsData, recurringPaymentsData]);
+
   const cards = [
     {
       title: t('monthlyIncome'),
@@ -133,12 +166,12 @@ const Dashboard = () => {
       detailTitle: `${t('totalAssets')} Kalemleri`,
     },
     {
-      title: t('totalBalance'),
-      value: summaryData.totalBalance,
+      title: t('netLiquidity'),
+      value: netLiquidityBalance,
       icon: <FiDollarSign />,
-      color: 'text-blue-500',
+      color: (netLiquidityBalance || 0) < 0 ? 'text-red-500' : 'text-emerald-500',
       onDetailClick: () => setSummaryDetailModal('totalBalance'),
-      detailTitle: `${t('totalBalance')} Kalemleri`,
+      detailTitle: t('netLiquidityDetail'),
     },
   ];
 
@@ -329,10 +362,10 @@ const Dashboard = () => {
             summaryDetailModal === 'monthlyIncome' ? `${t('monthlyIncome')} Kalemleri ve Hesaplama Detayı` :
             summaryDetailModal === 'monthlyExpenses' ? `${t('monthlyExpenses')} Kalemleri ve Harcama Dağılımı` :
             summaryDetailModal === 'totalAssets' ? `${t('totalAssets')} Portföyü ve Değerleme Detayları` :
-            summaryDetailModal === 'totalBalance' ? `${t('totalBalance')} (Net Likidite) Hesaplama Detayı` :
+            summaryDetailModal === 'totalBalance' ? t('netLiquidityDetail') :
             'Detaylar'
           }
-          size="lg"
+          size="2xl"
         >
           <div className="space-y-4 text-xs text-gray-700 dark:text-gray-200">
             {/* 1. AYLIK GELİR */}
@@ -515,63 +548,139 @@ const Dashboard = () => {
             )}
 
             {/* 4. TOPLAM BAKİYE */}
-            {summaryDetailModal === 'totalBalance' && (
-              <div className="space-y-4">
-                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase">Net Likidite Formülü</span>
-                    <span className="text-base font-bold text-blue-800 dark:text-blue-200">{fmt(summaryData.totalBalance)}</span>
-                  </div>
-                  <p className="text-xs font-mono text-gray-700 dark:text-gray-300">
-                    Toplam Bakiye = Toplam Likit Varlıklar - Toplam Kredi Kartı Borçları
-                  </p>
-                </div>
+            {summaryDetailModal === 'totalBalance' && (() => {
+              const totalAssetsVal = assetData.reduce((s, a) => s + (a.currentValueTRY || a.currentAmount || 0), 0);
+              const totalCardDebtVal = creditCardsData.reduce((s, c) => {
+                const usedLimit = (c.totalLimit !== undefined && c.availableLimit !== undefined)
+                  ? Math.max(0, c.totalLimit - c.availableLimit)
+                  : 0;
+                return s + Math.max(c.currentBalance || 0, usedLimit);
+              }, 0);
+              const loanPaymentsList = recurringPaymentsData.filter(p => {
+                if (p.isActive === false) return false;
+                const catName = (p.category?.name || '').toLowerCase();
+                const name = (p.name || '').toLowerCase();
+                return (catName.includes('kredi') || name.includes('kredi')) && !catName.includes('kredi kartı') && !name.includes('kredi kartı');
+              });
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Likit Varlıklar */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between border-b pb-1">
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+ Likit Varlıklar</span>
-                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{fmt(assetData.reduce((s, a) => s + (a.currentValueTRY || a.currentAmount || 0), 0))}</span>
+              const getLoanTotalDebt = p => {
+                if (p.totalAmount && p.totalAmount > 0) return p.totalAmount;
+                if (p.remainingInstallments !== undefined && p.remainingInstallments > 0) {
+                  return (p.amount || 0) * p.remainingInstallments;
+                }
+                if (p.endDate) {
+                  const now = new Date();
+                  const end = new Date(p.endDate);
+                  const remainingMonths = Math.max(1, (end.getFullYear() - now.getFullYear()) * 12 + (end.getMonth() - now.getMonth()));
+                  return (p.amount || 0) * remainingMonths;
+                }
+                return (p.amount || 0) * 12; // Fallback to 12 months if duration not set
+              };
+
+              const totalLoanDebtVal = loanPaymentsList.reduce((s, p) => s + getLoanTotalDebt(p), 0);
+              const dynamicNetLiquidity = totalAssetsVal - totalCardDebtVal - totalLoanDebtVal;
+
+              return (
+                <div className="space-y-4">
+                  <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase">{t('netLiquidityFormula')}</span>
+                      <span className="text-base font-bold text-blue-800 dark:text-blue-200">{fmt(dynamicNetLiquidity)}</span>
                     </div>
-                    <div className="overflow-y-auto max-h-[35vh] space-y-1.5 pr-1">
-                      {assetData.map((asset, idx) => (
-                        <div key={asset._id || idx} className="flex justify-between items-center p-2 rounded bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 text-xs">
-                          <div>
-                            <span className="font-medium text-gray-800 dark:text-gray-200 block">{asset.name}</span>
-                            <span className="text-[10px] text-gray-400">{asset.assetType || asset.type}</span>
-                          </div>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400">{fmt(asset.currentValueTRY || asset.currentAmount)}</span>
-                        </div>
-                      ))}
-                    </div>
+                    <p className="text-xs font-mono text-gray-700 dark:text-gray-300">
+                      {t('netLiquidityFormulaDesc')}
+                    </p>
                   </div>
 
-                  {/* Kredi Kartı Borçları */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between border-b pb-1">
-                      <span className="text-xs font-bold text-red-600 dark:text-red-400">- Kredi Kartı Borçları</span>
-                      <span className="text-xs font-bold text-red-700 dark:text-red-300">-{fmt(creditCardsData.reduce((s, c) => s + (c.currentBalance || 0), 0))}</span>
-                    </div>
-                    <div className="overflow-y-auto max-h-[35vh] space-y-1.5 pr-1">
-                      {creditCardsData.length === 0 ? (
-                        <div className="text-xs text-gray-400 py-4 text-center">Kayıtlı kredi kartı borcu yok.</div>
-                      ) : (
-                        creditCardsData.map((card, idx) => (
-                          <div key={card._id || idx} className="flex justify-between items-center p-2 rounded bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Likit Varlıklar */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between border-b pb-1">
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+ {t('liquidAssets')}</span>
+                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{fmt(totalAssetsVal)}</span>
+                      </div>
+                      <div className="overflow-y-auto max-h-[35vh] space-y-1.5 pr-1">
+                        {assetData.map((asset, idx) => (
+                          <div key={asset._id || idx} className="flex justify-between items-center p-2 rounded bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 text-xs">
                             <div>
-                              <span className="font-medium text-gray-800 dark:text-gray-200 block">{card.bankName} - {card.name}</span>
-                              <span className="text-[10px] text-gray-400">Son Ödeme: Ayın {card.paymentDueDay}. günü</span>
+                              <span className="font-medium text-gray-800 dark:text-gray-200 block">{asset.name}</span>
+                              <span className="text-[10px] text-gray-400">{asset.assetType || asset.type}</span>
                             </div>
-                            <span className="font-bold text-red-600 dark:text-red-400">-{fmt(card.currentBalance)}</span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400">{fmt(asset.currentValueTRY || asset.currentAmount)}</span>
                           </div>
-                        ))
-                      )}
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Kredi Kartı Borçları */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between border-b pb-1">
+                        <div>
+                          <span className="text-xs font-bold text-red-600 dark:text-red-400 block">- {t('creditCards')}</span>
+                          <span className="text-[10px] text-gray-400">{t('usedLimitInstallmentsIncluded')}</span>
+                        </div>
+                        <span className="text-xs font-bold text-red-700 dark:text-red-300">-{fmt(totalCardDebtVal)}</span>
+                      </div>
+                      <div className="overflow-y-auto max-h-[35vh] space-y-1.5 pr-1">
+                        {creditCardsData.length === 0 ? (
+                          <div className="text-xs text-gray-400 py-4 text-center">Kayıtlı kredi kartı borcu yok.</div>
+                        ) : (
+                          creditCardsData.map((card, idx) => {
+                            const usedLimit = (card.totalLimit !== undefined && card.availableLimit !== undefined)
+                              ? Math.max(0, card.totalLimit - card.availableLimit)
+                              : 0;
+                            const cardDebt = Math.max(card.currentBalance || 0, usedLimit);
+
+                            return (
+                              <div key={card._id || idx} className="flex justify-between items-center p-2 rounded bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 text-xs">
+                                <div>
+                                  <span className="font-medium text-gray-800 dark:text-gray-200 block">{card.bankName} - {card.name}</span>
+                                  <span className="text-[10px] text-gray-400">
+                                    Ekstre: {fmt(card.currentBalance)} {usedLimit > card.currentBalance ? `| Toplam: ${fmt(usedLimit)}` : ''}
+                                  </span>
+                                </div>
+                                <span className="font-bold text-red-600 dark:text-red-400">-{fmt(cardDebt)}</span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Kredi Borçları */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between border-b pb-1">
+                        <div>
+                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400 block">- {t('loan')}</span>
+                          <span className="text-[10px] text-gray-400">{t('remainingTotalLoanDebt')}</span>
+                        </div>
+                        <span className="text-xs font-bold text-amber-700 dark:text-amber-300">-{fmt(totalLoanDebtVal)}</span>
+                      </div>
+                      <div className="overflow-y-auto max-h-[35vh] space-y-1.5 pr-1">
+                        {loanPaymentsList.length === 0 ? (
+                          <div className="text-xs text-gray-400 py-4 text-center">Kayıtlı kredi borcu yok.</div>
+                        ) : (
+                          loanPaymentsList.map((loan, idx) => {
+                            const loanDebt = getLoanTotalDebt(loan);
+                            return (
+                              <div key={loan._id || idx} className="flex justify-between items-center p-2 rounded bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 text-xs">
+                                <div>
+                                  <span className="font-medium text-gray-800 dark:text-gray-200 block">{loan.name}</span>
+                                  <span className="text-[10px] text-gray-400">
+                                    Aylık Taksit: {fmt(loan.amount)} | Kalan Borç: {fmt(loanDebt)}
+                                  </span>
+                                </div>
+                                <span className="font-bold text-amber-600 dark:text-amber-400">-{fmt(loanDebt)}</span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         </Modal>
       </div>

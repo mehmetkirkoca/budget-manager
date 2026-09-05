@@ -96,6 +96,12 @@ const resources = {
       
       // Dashboard
       totalBalance: 'Total Balance',
+      netLiquidity: 'Net Liquidity',
+      netLiquidityDetail: 'Net Liquidity Breakdown & Calculation',
+      netLiquidityFormula: 'Net Liquidity Formula',
+      netLiquidityFormulaDesc: 'Net Liquidity = Total Liquid Assets - Total Credit Card Debts - Total Remaining Loan Debts',
+      usedLimitInstallmentsIncluded: 'Used Limit / Inc. Installments',
+      remainingTotalLoanDebt: 'Total Remaining Loan Debt / Inc. Installments',
       monthlyIncome: 'Monthly Income',
       monthlyExpenses: 'Monthly Expenses',
       netBalance: 'Net Balance',
@@ -549,6 +555,12 @@ const resources = {
       
       // Dashboard
       totalBalance: 'Toplam Bakiye',
+      netLiquidity: 'Net Likidite',
+      netLiquidityDetail: 'Net Likidite Kalemleri ve Hesaplama Detayı',
+      netLiquidityFormula: 'Net Likidite Formülü',
+      netLiquidityFormulaDesc: 'Toplam Bakiye = Toplam Likit Varlıklar - Toplam Kredi Kartı Borçları - Kalan Toplam Kredi Borçları',
+      usedLimitInstallmentsIncluded: 'Kullanılan Limit / Taksitler Dahil',
+      remainingTotalLoanDebt: 'Kalan Toplam Borç / Taksitler Dahil',
       monthlyIncome: 'Aylık Gelir',
       monthlyExpenses: 'Aylık Giderler',
       netBalance: 'Net Kalan',

@@ -13,7 +13,7 @@ const SummaryCard = ({ icon, title, value, color, onDetailClick, detailTitle }) 
         </IconContext.Provider>
         <div className="ml-4 truncate">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
+          <p className={`text-2xl font-bold truncate ${value < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
             {value.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
           </p>
         </div>

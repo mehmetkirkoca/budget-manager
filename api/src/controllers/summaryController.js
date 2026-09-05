@@ -2,6 +2,7 @@ const Expense = require('../models/Expense');
 const Asset = require('../models/Asset');
 const Income = require('../models/Income');
 const CreditCard = require('../models/CreditCard');
+const RecurringPayment = require('../models/RecurringPayment');
 const assetConversionService = require('../services/assetConversionService');
 
 const getSummary = async (request, reply) => {
@@ -40,9 +41,38 @@ const getSummary = async (request, reply) => {
     const totalCurrentAssets = assetConversions.totalCurrentTRY;
     const totalTargetAssets = assetConversions.totalTargetTRY;
 
-    // Get total credit card debts
+    // Get total credit card debts (used limit: totalLimit - availableLimit, or currentBalance if larger)
     const creditCards = await CreditCard.find({ isActive: true });
-    const totalCreditCardDebt = creditCards.reduce((sum, card) => sum + (card.currentBalance || 0), 0);
+    const totalCreditCardDebt = creditCards.reduce((sum, card) => {
+      const usedLimit = (card.totalLimit !== undefined && card.availableLimit !== undefined)
+        ? Math.max(0, card.totalLimit - card.availableLimit)
+        : 0;
+      return sum + Math.max(card.currentBalance || 0, usedLimit);
+    }, 0);
+    const totalStatementBalance = creditCards.reduce((sum, card) => sum + (card.currentBalance || 0), 0);
+
+    // Get total bank loan recurring payments (total overall remaining loan liabilities)
+    const recurringPayments = await RecurringPayment.find({ isActive: true }).populate('category');
+    const loanPayments = recurringPayments.filter(p => {
+      const catName = (p.category?.name || '').toLowerCase();
+      const name = (p.name || '').toLowerCase();
+      return (catName.includes('kredi') || name.includes('kredi')) && !catName.includes('kredi kartı') && !name.includes('kredi kartı');
+    });
+    
+    const getLoanTotalDebt = p => {
+      if (p.totalAmount && p.totalAmount > 0) return p.totalAmount;
+      if (p.remainingInstallments !== undefined && p.remainingInstallments > 0) {
+        return (p.amount || 0) * p.remainingInstallments;
+      }
+      if (p.endDate) {
+        const now = new Date();
+        const end = new Date(p.endDate);
+        const remainingMonths = Math.max(1, (end.getFullYear() - now.getFullYear()) * 12 + (end.getMonth() - now.getMonth()));
+        return (p.amount || 0) * remainingMonths;
+      }
+      return (p.amount || 0) * 12; // Fallback to 12 months if duration not set
+    };
+    const totalLoanDebt = loanPayments.reduce((sum, p) => sum + getLoanTotalDebt(p), 0);
 
     // Calculate monthly income from Income model
     // Get one-time incomes for current month
@@ -88,7 +118,7 @@ const getSummary = async (request, reply) => {
     const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100 : 0;
 
     const summary = {
-      totalBalance: totalCurrentAssets - totalCreditCardDebt,
+      totalBalance: totalCurrentAssets - totalCreditCardDebt - totalLoanDebt,
       monthlyIncome,
       monthlyExpenses,
       savingsRate: Math.max(0, savingsRate),
@@ -96,7 +126,9 @@ const getSummary = async (request, reply) => {
       totalAssets: totalCurrentAssets,
       totalTargetAssets,
       totalCreditCardDebt,
-      netWorth: totalCurrentAssets - totalCreditCardDebt - totalExpenses,
+      totalStatementBalance,
+      totalLoanDebt,
+      netWorth: totalCurrentAssets - totalCreditCardDebt - totalLoanDebt - totalExpenses,
       remainingToTarget: Math.max(0, totalTargetAssets - totalCurrentAssets),
     };
 

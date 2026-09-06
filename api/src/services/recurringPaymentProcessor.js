@@ -138,7 +138,7 @@ class RecurringPaymentProcessor {
             amount: payment.amount,
             description: `${payment.name} - Auto-created from recurring payment`,
             date: payment.nextDue,
-            status: 'Gerçekleşti',
+            status: 'completed',
             recurringPaymentId: payment._id // Add reference for tracking
           });
 

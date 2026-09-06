@@ -16,11 +16,13 @@ import DropZone from '../components/DropZone';
 import WidgetSelector from '../components/WidgetSelector';
 import WidgetColumn from '../components/WidgetColumn';
 import Modal from '../components/Modal';
+import DuePaymentsModal from '../components/DuePaymentsModal';
 import { getSummary } from '../services/dashboardService';
 import { getAllAssets } from '../services/assetService';
 import { getAllIncomes } from '../services/incomeService';
 import { getAllRecurringPayments } from '../services/recurringPaymentService';
 import { creditCardService, creditCardUtils } from '../services/creditCardService';
+import { getPendingDuePayments } from '../services/duePaymentService';
 import { useWidgetLayout } from '../hooks/useWidgetLayout';
 import { FiTrendingUp, FiTrendingDown, FiDollarSign, FiActivity, FiRefreshCw, FiPlus, FiEdit, FiCheck, FiX, FiEye } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
@@ -39,6 +41,8 @@ const Dashboard = () => {
   const [incomesData, setIncomesData] = useState([]);
   const [recurringPaymentsData, setRecurringPaymentsData] = useState([]);
   const [creditCardsData, setCreditCardsData] = useState([]);
+  const [pendingDuePayments, setPendingDuePayments] = useState([]);
+  const [dueModalOpen, setDueModalOpen] = useState(false);
 
   // Helper function to find widget position
   const findWidgetPosition = (widgetId) => {
@@ -82,12 +86,13 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [summary, assets, incomes, recurring, cards] = await Promise.all([
+      const [summary, assets, incomes, recurring, cards, pendingData] = await Promise.all([
         getSummary(),
         getAllAssets(),
         getAllIncomes().catch(() => []),
         getAllRecurringPayments().catch(() => []),
         creditCardService.getAllCreditCards().catch(() => []),
+        getPendingDuePayments().catch(() => ({ pendingPayments: [] }))
       ]);
 
       setSummaryData({
@@ -100,6 +105,11 @@ const Dashboard = () => {
       setIncomesData(incomes || []);
       setRecurringPaymentsData(recurring || []);
       setCreditCardsData(cards || []);
+
+      if (pendingData && pendingData.pendingPayments && pendingData.pendingPayments.length > 0) {
+        setPendingDuePayments(pendingData.pendingPayments);
+        setDueModalOpen(true);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -683,6 +693,14 @@ const Dashboard = () => {
             })()}
           </div>
         </Modal>
+
+        <DuePaymentsModal
+          isOpen={dueModalOpen}
+          onClose={() => setDueModalOpen(false)}
+          pendingPayments={pendingDuePayments}
+          assets={assetData}
+          onPaymentProcessed={fetchDashboardData}
+        />
       </div>
     </DndProvider>
   );

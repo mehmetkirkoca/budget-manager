@@ -17,6 +17,8 @@ const RecurringPaymentForm = ({ onClose, payment, onSave }) => {
     monthOfYear: '',
     autoCreate: false,
     reminderDays: 3,
+    totalInstallments: '',
+    remainingInstallments: '',
     isActive: true
   });
   const [categories, setCategories] = useState([]);
@@ -38,6 +40,8 @@ const RecurringPaymentForm = ({ onClose, payment, onSave }) => {
         monthOfYear: payment.monthOfYear || '',
         autoCreate: payment.autoCreate || false,
         reminderDays: payment.reminderDays || 3,
+        totalInstallments: payment.totalInstallments || '',
+        remainingInstallments: payment.remainingInstallments || '',
         isActive: payment.isActive !== undefined ? payment.isActive : true
       });
     }
@@ -92,6 +96,8 @@ const RecurringPaymentForm = ({ onClose, payment, onSave }) => {
         dayOfWeek: formData.dayOfWeek !== '' ? parseInt(formData.dayOfWeek) : undefined,
         monthOfYear: formData.monthOfYear ? parseInt(formData.monthOfYear) : undefined,
         reminderDays: parseInt(formData.reminderDays),
+        totalInstallments: formData.totalInstallments ? parseInt(formData.totalInstallments) : undefined,
+        remainingInstallments: formData.remainingInstallments ? parseInt(formData.remainingInstallments) : undefined,
         startDate: new Date(formData.startDate).toISOString(),
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : undefined
       };
@@ -242,6 +248,38 @@ const RecurringPaymentForm = ({ onClose, payment, onSave }) => {
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             />
+          </div>
+
+          {/* Installments (Optional) */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('totalInstallments', 'Toplam Taksit')}
+              </label>
+              <input
+                type="number"
+                min="1"
+                name="totalInstallments"
+                value={formData.totalInstallments}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-xs"
+                placeholder="Örn: 12"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('remainingInstallments', 'Kalan Taksit')}
+              </label>
+              <input
+                type="number"
+                min="0"
+                name="remainingInstallments"
+                value={formData.remainingInstallments}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-xs"
+                placeholder="Örn: 8"
+              />
+            </div>
           </div>
         </div>
 

@@ -176,14 +176,19 @@ creditCardSchema.methods.calculateNextStatementDate = function() {
 
 // Method to calculate next payment due date
 creditCardSchema.methods.calculateNextPaymentDue = function() {
-  const today = new Date();
-  const nextPayment = new Date(today.getFullYear(), today.getMonth(), this.paymentDueDay);
-  
-  if (nextPayment <= today) {
-    nextPayment.setMonth(nextPayment.getMonth() + 1);
+  if (this.nextPaymentDue) {
+    const nextDue = new Date(this.nextPaymentDue);
+    nextDue.setMonth(nextDue.getMonth() + 1);
+    return nextDue;
   }
-  
-  return nextPayment;
+
+  const today = new Date();
+  const dueDay = this.paymentDueDay || 15;
+  const nextDue = new Date(today.getFullYear(), today.getMonth(), dueDay);
+  if (nextDue <= today) {
+    nextDue.setMonth(nextDue.getMonth() + 1);
+  }
+  return nextDue;
 };
 
 // Method to calculate minimum payment

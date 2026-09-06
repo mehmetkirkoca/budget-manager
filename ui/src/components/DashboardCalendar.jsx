@@ -263,21 +263,53 @@ const DashboardCalendar = ({ monthlyIncome = 0, onCurrentMonthTotal }) => {
         });
       }
 
-      const expenseItems = (expenses || []).map(e => ({
-        _id: `exp_${e._id}`,
-        name: e.description,
-        nextDue: e.date,
-        amount: e.amount,
-        effectiveAmount: e.amount,
-        category: e.category,
-        amountInfo: { isDynamic: false },
-        _expenseType: e.status,
-      }));
+      const expenseItems = (expenses || [])
+        .filter(e => e.status !== 'completed' && e.status !== 'Gerçekleşti')
+        .map(e => ({
+          _id: `exp_${e._id}`,
+          name: e.description,
+          nextDue: e.date,
+          amount: e.amount,
+          effectiveAmount: e.amount,
+          category: e.category,
+          amountInfo: { isDynamic: false },
+          _expenseType: e.status || 'pending',
+        }));
 
-      const newItems = [...recurring, ...ccItems, ...expenseItems];
+      // Combine recurring and ccItems first
+      const allItems = [...recurring, ...ccItems];
+
+      // Add expenseItems only if not already represented by a recurring payment or credit card item on the same date
+      expenseItems.forEach(exp => {
+        const expDateStr = new Date(exp.nextDue).toDateString();
+        const expNameNorm = (exp.name || '').toLowerCase();
+
+        const isDuplicate = allItems.some(item => {
+          const itemDateStr = new Date(item.nextDue).toDateString();
+          if (itemDateStr !== expDateStr) return false;
+
+          const itemNameNorm = (item.name || '').toLowerCase();
+          const amountDiff = Math.abs((item.amount || item.effectiveAmount || 0) - (exp.amount || 0));
+
+          // Check for keyword matches or close amount matches on the same date
+          const nameMatch = (itemNameNorm.includes('qnb') && expNameNorm.includes('qnb')) ||
+                            (itemNameNorm.includes('konut') && expNameNorm.includes('konut')) ||
+                            (itemNameNorm.includes('akbank') && expNameNorm.includes('akbank')) ||
+                            (itemNameNorm.includes('enpara') && expNameNorm.includes('enpara')) ||
+                            (itemNameNorm.includes('garanti') && expNameNorm.includes('garanti')) ||
+                            itemNameNorm === expNameNorm;
+
+          return nameMatch || amountDiff < 5;
+        });
+
+        if (!isDuplicate) {
+          allItems.push(exp);
+        }
+      });
+
       setPayments(prev => {
         const existingIds = new Set(prev.map(p => p._id));
-        return [...prev, ...newItems.filter(p => !existingIds.has(p._id))];
+        return [...prev, ...allItems.filter(p => !existingIds.has(p._id))];
       });
       loadedMonths.current.add(key);
     } catch (err) {

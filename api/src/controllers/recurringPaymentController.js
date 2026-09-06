@@ -216,35 +216,297 @@ const getCalendarEvents = async (request, reply) => {
 const markAsPaid = async (request, reply) => {
   try {
     const { id } = request.params;
-    const { createExpense = false } = request.body;
+    const { createExpense = true, assetId } = request.body || {};
     
     const payment = await RecurringPayment.findById(id).populate('category');
     if (!payment) {
       return reply.status(404).send({ error: 'Recurring payment not found' });
     }
+
+    const Asset = require('../models/Asset');
+    let assetObj = null;
+
+    // Deduct from selected asset if provided
+    if (assetId) {
+      assetObj = await Asset.findById(assetId);
+      if (assetObj) {
+        assetObj.currentAmount = Math.max(0, (assetObj.currentAmount || 0) - payment.amount);
+        await assetObj.save();
+      }
+    }
     
     // Create expense if requested
     if (createExpense) {
+      const Category = require('../models/Category');
+      let expCategory = payment.category?._id || payment.category;
+      if (!expCategory) {
+        const defaultCat = await Category.findOne({ isActive: true });
+        expCategory = defaultCat?._id;
+      }
+
       const expense = new Expense({
-        category: payment.category._id,
+        category: expCategory,
         amount: payment.amount,
-        description: `${payment.name} - Recurring payment`,
-        date: payment.nextDue,
-        status: 'Gerçekleşti'
+        description: `${payment.name} - Ödeme Yapıldı${assetObj ? ` (${assetObj.name})` : ''}`,
+        date: payment.nextDue || new Date(),
+        status: 'completed'
       });
       await expense.save();
     }
+
+    // Decrement remaining installments if present
+    if (payment.remainingInstallments !== undefined && payment.remainingInstallments > 0) {
+      payment.remainingInstallments = Math.max(0, payment.remainingInstallments - 1);
+      if (payment.remainingInstallments === 0) {
+        payment.isActive = false;
+      }
+    }
+
+    // Decrement total amount if present
+    if (payment.totalAmount !== undefined && payment.totalAmount > 0) {
+      payment.totalAmount = Math.max(0, payment.totalAmount - payment.amount);
+      if (payment.totalAmount === 0) {
+        payment.isActive = false;
+      }
+    }
     
     // Update payment with next due date
-    payment.lastProcessed = payment.nextDue;
-    payment.nextDue = payment.calculateNextDue();
+    payment.lastProcessed = payment.nextDue || new Date();
+    if (payment.isActive) {
+      payment.nextDue = payment.calculateNextDue();
+    }
     await payment.save();
     
     reply.send({ 
       message: 'Payment marked as paid',
       nextDue: payment.nextDue,
-      expenseCreated: createExpense
+      remainingInstallments: payment.remainingInstallments,
+      totalAmount: payment.totalAmount,
+      expenseCreated: createExpense,
+      assetUpdated: assetObj ? assetObj.name : null
     });
+  } catch (err) {
+    reply.status(500).send({ error: err.message });
+  }
+};
+
+const getPendingDuePayments = async (request, reply) => {
+  try {
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    // 1. Get active recurring payments / bank loans
+    const recurringPayments = await RecurringPayment.find({
+      isActive: { $ne: false }
+    }).populate('category');
+
+    const formattedRecurring = recurringPayments
+      .filter(p => {
+        const dueDate = new Date(p.nextDue || p.startDate || new Date());
+        return dueDate <= endOfToday;
+      })
+      .map(p => ({
+        id: p._id,
+        type: 'recurring',
+        name: p.name,
+        categoryName: p.category?.name || 'Ödeme',
+        categoryColor: p.category?.color || '#3b82f6',
+        amount: p.amount,
+        dueDate: p.nextDue || p.startDate || new Date(),
+        remainingInstallments: p.remainingInstallments,
+        totalAmount: p.totalAmount,
+        frequency: p.frequency
+      }));
+
+    // 2. Get active credit cards
+    const CreditCard = require('../models/CreditCard');
+    const Asset = require('../models/Asset');
+
+    const creditCards = await CreditCard.find({
+      isActive: { $ne: false }
+    });
+    const formattedCards = [];
+    const now = new Date();
+
+    creditCards.forEach(c => {
+      const usedLimit = (c.totalLimit !== undefined && c.availableLimit !== undefined)
+        ? Math.max(0, c.totalLimit - c.availableLimit)
+        : 0;
+      const debt = Math.max(c.currentBalance || 0, usedLimit, c.minimumPaymentAmount || 0);
+
+      if (debt > 0) {
+        let dueDate = c.nextPaymentDue;
+        if (!dueDate) {
+          dueDate = new Date(now.getFullYear(), now.getMonth(), c.paymentDueDay || 15);
+        }
+        const dueDateTime = new Date(dueDate);
+
+        if (dueDateTime <= endOfToday) {
+          const balance = c.currentBalance || debt || 0;
+          let minAmount = c.minimumPaymentAmount;
+
+          // If stored minimumPaymentAmount is invalid, zero, or equal/greater than full balance (100%), calculate BDDK rate
+          if (!minAmount || minAmount <= 0 || minAmount >= balance * 0.95) {
+            let rate = c.minimumPaymentRate;
+            if (!rate || rate <= 0.05 || rate >= 0.99) {
+              rate = (c.totalLimit && c.totalLimit >= 50000) ? 0.40 : 0.20;
+            }
+            minAmount = Math.round(balance * rate * 100) / 100;
+          }
+
+          formattedCards.push({
+            id: c._id,
+            type: 'creditCard',
+            name: `${c.bankName} - ${c.name}`,
+            categoryName: 'Kredi Kartı',
+            categoryColor: '#ef4444',
+            amount: balance,
+            minimumPaymentAmount: minAmount,
+            dueDate: dueDate,
+            bankName: c.bankName
+          });
+        }
+      }
+    });
+
+    // 3. Get all active liquid assets for dropdown
+    const assets = await Asset.find({});
+
+    reply.send({
+      pendingPayments: [...formattedRecurring, ...formattedCards],
+      assets
+    });
+  } catch (err) {
+    reply.status(500).send({ error: err.message });
+  }
+};
+
+const confirmDuePayment = async (request, reply) => {
+  try {
+    const { id, type, assetId, amount } = request.body || {};
+
+    if (!id || !type) {
+      return reply.status(400).send({ error: 'Missing payment id or type' });
+    }
+
+    const Asset = require('../models/Asset');
+    const CreditCard = require('../models/CreditCard');
+
+    let assetObj = null;
+    if (assetId) {
+      assetObj = await Asset.findById(assetId);
+    }
+
+    let processedAmount = Number(amount) || 0;
+
+    if (type === 'recurring') {
+      const payment = await RecurringPayment.findById(id).populate('category');
+      if (!payment) {
+        return reply.status(404).send({ error: 'Recurring payment not found' });
+      }
+
+      processedAmount = processedAmount || payment.amount;
+
+      // 1. Deduct from selected asset balance
+      if (assetObj) {
+        assetObj.currentAmount = Math.max(0, (assetObj.currentAmount || 0) - processedAmount);
+        await assetObj.save();
+      }
+
+      // 2. Create Expense record
+      const Category = require('../models/Category');
+      let expCategory = payment.category?._id || payment.category;
+      if (!expCategory) {
+        const defaultCat = await Category.findOne({ isActive: true });
+        expCategory = defaultCat?._id;
+      }
+
+      const expense = new Expense({
+        category: expCategory,
+        amount: processedAmount,
+        description: `${payment.name} - Ödendi${assetObj ? ` (${assetObj.name})` : ''}`,
+        date: new Date(),
+        status: 'completed'
+      });
+      await expense.save();
+
+      // 3. Decrement remaining installments / total amount if present
+      if (payment.remainingInstallments !== undefined && payment.remainingInstallments > 0) {
+        payment.remainingInstallments = Math.max(0, payment.remainingInstallments - 1);
+        if (payment.remainingInstallments === 0) {
+          payment.isActive = false;
+        }
+      }
+      if (payment.totalAmount !== undefined && payment.totalAmount > 0) {
+        payment.totalAmount = Math.max(0, payment.totalAmount - processedAmount);
+        if (payment.totalAmount === 0) {
+          payment.isActive = false;
+        }
+      }
+
+      payment.lastProcessed = new Date();
+      if (payment.isActive) {
+        payment.nextDue = payment.calculateNextDue();
+      }
+      await payment.save();
+
+      return reply.send({
+        message: 'Payment confirmed and asset updated successfully',
+        payment,
+        asset: assetObj
+      });
+    } else if (type === 'creditCard') {
+      const card = await CreditCard.findById(id);
+      if (!card) {
+        return reply.status(404).send({ error: 'Credit card not found' });
+      }
+
+      processedAmount = processedAmount || card.currentBalance;
+
+      // 1. Deduct from asset
+      if (assetObj) {
+        assetObj.currentAmount = Math.max(0, (assetObj.currentAmount || 0) - processedAmount);
+        await assetObj.save();
+      }
+
+      // 2. Reduce card current balance / update available limit & update next payment due date
+      card.currentBalance = Math.max(0, (card.currentBalance || 0) - processedAmount);
+      if (card.availableLimit !== undefined && card.totalLimit !== undefined) {
+        card.availableLimit = Math.min(card.totalLimit, card.availableLimit + processedAmount);
+      }
+      if (typeof card.calculateNextPaymentDue === 'function') {
+        if (card.lastStatementDate && card.statementDay) {
+          const lastSt = new Date(card.lastStatementDate);
+          card.lastStatementDate = new Date(lastSt.getFullYear(), lastSt.getMonth() + 1, Math.min(card.statementDay, 28));
+        }
+        card.nextPaymentDue = card.calculateNextPaymentDue();
+      }
+      await card.save();
+
+      // 3. Create Expense record
+      const Category = require('../models/Category');
+      let defaultCategory = await Category.findOne({ name: { $regex: /kredi kart/i } });
+      if (!defaultCategory) {
+        defaultCategory = await Category.findOne({ isActive: true });
+      }
+
+      const expense = new Expense({
+        category: defaultCategory?._id,
+        amount: processedAmount,
+        description: `${card.bankName} - ${card.name} Kredi Kartı Ödemesi Yapıldı${assetObj ? ` (${assetObj.name})` : ''}`,
+        date: new Date(),
+        status: 'completed'
+      });
+      await expense.save();
+
+      return reply.send({
+        message: 'Credit card payment confirmed and asset updated successfully',
+        card,
+        asset: assetObj
+      });
+    }
+
+    reply.status(400).send({ error: 'Invalid payment type' });
   } catch (err) {
     reply.status(500).send({ error: err.message });
   }
@@ -258,4 +520,6 @@ module.exports = {
   getUpcomingPayments,
   getCalendarEvents,
   markAsPaid,
+  getPendingDuePayments,
+  confirmDuePayment
 };

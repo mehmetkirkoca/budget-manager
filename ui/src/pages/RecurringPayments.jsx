@@ -55,11 +55,9 @@ const RecurringPayments = () => {
   };
 
   const handleMarkAsPaid = async (paymentId) => {
-    const createExpense = window.confirm('Do you want to create an expense record for this payment?');
     try {
-      await markPaymentAsPaid(paymentId, createExpense);
+      await markPaymentAsPaid(paymentId, true);
       await fetchPayments();
-      alert('Payment marked as paid successfully');
     } catch (error) {
       console.error('Error marking payment as paid:', error);
       alert('Error marking payment as paid');
@@ -142,6 +140,11 @@ const RecurringPayments = () => {
           </div>
         );
       }
+    },
+    { 
+      header: t('remainingInstallments', 'Kalan Taksit'), 
+      key: 'remainingInstallments',
+      render: (row) => row.remainingInstallments !== undefined ? `${row.remainingInstallments} / ${row.totalInstallments || '-'}` : '-'
     },
     { 
       header: 'Status', 

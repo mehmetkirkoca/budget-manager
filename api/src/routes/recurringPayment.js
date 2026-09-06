@@ -50,6 +50,8 @@ async function recurringPaymentRoutes(fastify, options) {
   fastify.get('/recurring-payments/upcoming', recurringPaymentController.getUpcomingPayments);
   fastify.get('/recurring-payments/calendar', recurringPaymentController.getCalendarEvents);
   fastify.post('/recurring-payments/:id/mark-paid', recurringPaymentController.markAsPaid);
+  fastify.get('/recurring-payments/due-pending', recurringPaymentController.getPendingDuePayments);
+  fastify.post('/recurring-payments/due-confirm', recurringPaymentController.confirmDuePayment);
 }
 
 module.exports = recurringPaymentRoutes;

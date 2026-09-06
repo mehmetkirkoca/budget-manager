@@ -337,13 +337,16 @@ const getPaymentCalendar = async (request, reply) => {
         }
       }
       
+      const hasBilledDebt = (card.currentBalance > 0 || card.minimumPaymentAmount > 0 || !!card.lastStatementDate);
+      const shouldShowActuals = isActual || hasBilledDebt;
+
       calendar.push({
         type: 'card_payment',
         date: dueDate,
         title: `${card.bankName} ${card.name}`,
-        amount: isActual ? (card.minimumPaymentAmount || 0) : 0,
-        totalAmount: isActual ? (card.currentBalance || 0) : 0,
-        isUnbilled: !isActual,
+        amount: shouldShowActuals ? (card.minimumPaymentAmount || 0) : 0,
+        totalAmount: shouldShowActuals ? (card.currentBalance || 0) : 0,
+        isUnbilled: !shouldShowActuals,
         cardInfo: {
           id: card._id,
           name: card.name,
